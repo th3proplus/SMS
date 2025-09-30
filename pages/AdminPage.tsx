@@ -255,6 +255,39 @@ const NumbersPanel: React.FC = () => {
     const [editingSid, setEditingSid] = useState<string | null>(null);
     const [editFormData, setEditFormData] = useState<{ country: string; enabled: boolean; countryCode: string }>({ country: '', enabled: true, countryCode: '' });
 
+    const demoNumbers: PhoneNumber[] = [
+      {
+        id: 'demo-us-1',
+        number: '+1 201 555 0123',
+        country: 'United States (Demo)',
+        countryCode: 'US',
+        lastMessageAt: new Date(Date.now() - 1000 * 60 * 5), // 5 minutes ago
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30), // 30 days ago
+        webhookUrl: '',
+        enabled: true,
+      },
+      {
+        id: 'demo-gb-1',
+        number: '+44 7700 900123',
+        country: 'United Kingdom (Demo)',
+        countryCode: 'GB',
+        lastMessageAt: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 60), // 60 days ago
+        webhookUrl: '',
+        enabled: true,
+      },
+      {
+        id: 'demo-fr-1',
+        number: '+33 6 55 55 01 23',
+        country: 'France (Demo)',
+        countryCode: 'FR',
+        lastMessageAt: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 90), // 90 days ago
+        webhookUrl: '',
+        enabled: false,
+      },
+    ];
+
     const fetchNumbers = async () => {
         setIsLoading(true);
         setError(null);
@@ -279,6 +312,23 @@ const NumbersPanel: React.FC = () => {
     useEffect(() => {
         fetchNumbers();
     }, []);
+
+    const handleAddDemoNumbers = () => {
+        const currentSettings = getSettings();
+        const existingPublicSids = new Set((currentSettings.publicNumbers || []).map(n => n.id));
+        
+        const newDemoNumbersToAdd = demoNumbers.filter(demoNum => !existingPublicSids.has(demoNum.id));
+
+        if (newDemoNumbersToAdd.length === 0) {
+            alert('All demo numbers have already been added.');
+            return;
+        }
+
+        const updatedPublicNumbers = [...(currentSettings.publicNumbers || []), ...newDemoNumbersToAdd];
+        saveSettings({ ...currentSettings, publicNumbers: updatedPublicNumbers });
+        fetchNumbers();
+    };
+
 
     const handleEdit = (number: PhoneNumber) => {
         setEditingSid(number.id);
@@ -365,9 +415,19 @@ const NumbersPanel: React.FC = () => {
                  <div className="space-y-8">
                      {/* Your Public Numbers */}
                      <div>
-                        <h3 className="text-md font-semibold text-slate-700 dark:text-slate-300 mb-2">Your Public Numbers ({publicNumbers.length})</h3>
+                        <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                           <h3 className="text-md font-semibold text-slate-700 dark:text-slate-300">Your Public Numbers ({publicNumbers.length})</h3>
+                           <button
+                               onClick={handleAddDemoNumbers}
+                               className="flex items-center gap-2 px-3 py-1.5 text-sm bg-teal-100 dark:bg-teal-900/50 hover:bg-teal-200 dark:hover:bg-teal-900 text-teal-600 dark:text-teal-300 font-semibold rounded-md transition-colors"
+                           >
+                               <PlusIcon className="w-4 h-4" />
+                               Add Demo Numbers
+                           </button>
+                        </div>
+
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                            These numbers are visible on your website. Edit them to change their display name or disable them temporarily.
+                            These numbers are visible on your website. Edit them to change their display name or disable them temporarily. Demo numbers are for display purposes only and will not receive real messages.
                         </p>
                         <div className="space-y-3">
                             {publicNumbers.length > 0 ? publicNumbers.map(num => (
