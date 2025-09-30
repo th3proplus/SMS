@@ -282,6 +282,12 @@ const NumbersPanel: React.FC = () => {
                                             <p className="font-mono font-semibold text-slate-800 dark:text-slate-200">{num.number}</p>
                                         </div>
                                         <p className="text-sm text-slate-500 dark:text-slate-400 ml-4">{num.country} {num.countryCode ? `(${num.countryCode.toUpperCase()})` : ''}</p>
+                                        <div className="flex items-center gap-2 ml-4 mt-1.5" title="Webhook URL (configured in Twilio)">
+                                            <WebhookIcon className="w-4 h-4 text-slate-400 dark:text-slate-500 flex-shrink-0" />
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">
+                                                {num.webhookUrl || 'Not set'}
+                                            </p>
+                                        </div>
                                     </div>
                                     <div className="mt-2 sm:mt-0 sm:ml-4 flex-shrink-0">
                                          <button onClick={() => handleEdit(num)} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-md">
