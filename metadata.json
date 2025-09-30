@@ -1,0 +1,5 @@
+{
+  "name": "Free SMS Receiver",
+  "description": "A web application that simulates receiving SMS messages to temporary, virtual phone numbers for free. Ideal for account verification without using your personal number.",
+  "requestFramePermissions": []
+}
