@@ -119,7 +119,7 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title={settings.title} description={settings.description} />
+      <Header title={settings.title} description={settings.description} showAdminLink={true} />
       <main className="flex-grow container mx-auto p-4 md:p-6">
         <h2 className="text-xl font-bold text-slate-700 dark:text-slate-300 mb-4 px-2">Select a number to view messages</h2>
         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg overflow-hidden border border-slate-200 dark:border-slate-700/50">
