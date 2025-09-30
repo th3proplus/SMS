@@ -61,13 +61,13 @@ const TextContentPage: React.FC<TextContentPageProps> = ({ title, content }) => 
 
     return (
         <div className="flex flex-col min-h-screen">
-            <Header title={settings.title} description={settings.description} />
+            <Header title={settings.title} />
             <main className="flex-grow container mx-auto p-4 md:p-6">
                 <div className="max-w-4xl mx-auto">
                      <div className="mb-6">
                         <a
                             href="/"
-                            className="flex items-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-md transition-colors"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-md transition-colors"
                         >
                             <ChevronLeftIcon className="w-5 h-5" />
                             Back to Home

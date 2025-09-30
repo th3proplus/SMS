@@ -126,14 +126,14 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title={settings.title} description={settings.description} showAdminLink={true} />
+      <Header title={settings.title} showAdminLink={true} />
       <main className="flex-grow container mx-auto p-4 md:p-6">
         <div className="text-center py-8 md:py-12">
             <h1 className="text-4xl md:text-5xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
                 Receive SMS Online, <span className="text-teal-500 dark:text-teal-400">Instantly & Anonymously</span>
             </h1>
             <p className="mt-4 max-w-2xl mx-auto text-lg text-slate-500 dark:text-slate-400">
-                Protect your privacy with our free, temporary phone numbers. Perfect for online verifications without using your personal number.
+                {settings.description}
             </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
