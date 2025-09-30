@@ -27,7 +27,7 @@ const defaultSettings: Settings = {
     twilioAuthToken: '',
     adminUsername: 'admin',
     adminPassword: 'password',
-    numberSettings: {},
+    publicNumbers: [],
 };
 
 export const getSettings = (): Settings => {
@@ -35,19 +35,20 @@ export const getSettings = (): Settings => {
         const storedSettings = localStorage.getItem(SETTINGS_KEY);
         if (storedSettings) {
             const parsed = JSON.parse(storedSettings);
-            // Deep merge to ensure all keys from defaultSettings are present
-            return { 
+            // Create a new object by layering defaults, then parsed data, then deep-merge specific complex objects
+            const mergedSettings = { 
                 ...defaultSettings, 
-                ...parsed,
-                ads: {
-                    ...defaultSettings.ads,
-                    ...(parsed.ads || {})
-                },
-                 numberSettings: {
-                    ...defaultSettings.numberSettings,
-                    ...(parsed.numberSettings || {})
-                }
+                ...parsed
             };
+            // Now handle nested objects explicitly to prevent them from being overwritten completely
+            mergedSettings.ads = {
+                ...defaultSettings.ads,
+                ...(parsed.ads || {})
+            };
+            mergedSettings.footerLinks = parsed.footerLinks || defaultSettings.footerLinks;
+            mergedSettings.publicNumbers = parsed.publicNumbers || defaultSettings.publicNumbers;
+
+            return mergedSettings;
         }
     } catch (error) {
         console.error("Failed to parse settings from localStorage", error);
@@ -63,14 +64,6 @@ export const saveSettings = (settings: Settings): void => {
         console.error("Failed to save settings to localStorage", error);
     }
 };
-
-export const updateNumberSettings = (numberSid: string, newSettings: { country?: string; enabled?: boolean; countryCode?: string }): void => {
-    const settings = getSettings();
-    const currentNumberSettings = settings.numberSettings[numberSid] || {};
-    settings.numberSettings[numberSid] = { ...currentNumberSettings, ...newSettings };
-    saveSettings(settings);
-};
-
 
 export const applyTheme = (theme: 'light' | 'dark'): void => {
     const root = document.documentElement;

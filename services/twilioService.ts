@@ -121,38 +121,26 @@ async function twilioFetch(endpoint: string, options: RequestInit = {}): Promise
 const regionNames = new Intl.DisplayNames(['en'], {type: 'region'});
 
 // Maps a Twilio phone number resource to our PhoneNumber type
-const mapTwilioNumberToPhoneNumber = (twilioNumber: any, numberSettings: Settings['numberSettings']): PhoneNumber => {
-    const customSettings = numberSettings[twilioNumber.sid] || {};
-    
-    // Determine the final country code (override from settings > API)
-    const finalCountryCode = customSettings.countryCode || twilioNumber.iso_country;
-
-    // Determine the country name based on the final code
+const mapTwilioNumberToPhoneNumber = (twilioNumber: any): PhoneNumber => {
+    const countryCode = twilioNumber.iso_country;
     let countryName = 'Unknown Country';
-    if (finalCountryCode) {
+    if (countryCode) {
         try {
-            // Try to get a proper name from the code
-            countryName = regionNames.of(finalCountryCode) || finalCountryCode;
+            countryName = regionNames.of(countryCode) || countryCode;
         } catch (e) {
-            // If the code is invalid (e.g., 'XX'), fallback to the code itself
-            countryName = finalCountryCode;
+            countryName = countryCode;
         }
     }
     
-    // Override country name with custom display name if it exists
-    const finalCountryName = customSettings.country && customSettings.country.trim() !== '' 
-        ? customSettings.country 
-        : countryName;
-
     return {
         id: twilioNumber.sid,
         number: twilioNumber.phone_number,
-        country: finalCountryName,
-        countryCode: finalCountryCode, // Use the final, possibly overridden code
+        country: countryName,
+        countryCode: countryCode,
         lastMessageAt: new Date(0), // Default value, will be updated by getOwnedNumbers
         createdAt: new Date(twilioNumber.date_created),
         webhookUrl: twilioNumber.sms_url || '',
-        enabled: customSettings.enabled ?? true, // Default to true if not set
+        enabled: true, // This is managed in the settings, this is just a default for newly fetched numbers.
     };
 };
 
@@ -207,14 +195,13 @@ export const getOwnedNumbers = async (): Promise<PhoneNumber[]> => {
     }
     
     try {
-        const { numberSettings } = getSettings();
         const data = await twilioFetch('IncomingPhoneNumbers');
         const twilioNumbers = data.incoming_phone_numbers || [];
         
         // Concurrently fetch the latest message for each number to determine last activity
         const numbersWithActivity = await Promise.all(
             twilioNumbers.map(async (twilioNumber: any) => {
-                const number = mapTwilioNumberToPhoneNumber(twilioNumber, numberSettings);
+                const number = mapTwilioNumberToPhoneNumber(twilioNumber);
                 try {
                     const messageData = await twilioFetch(`Messages?To=${encodeURIComponent(number.number)}&PageSize=1`);
                     if (messageData.messages && messageData.messages.length > 0) {
@@ -247,11 +234,10 @@ export const getOwnedNumbers = async (): Promise<PhoneNumber[]> => {
 
 export const getNumberByValue = async (numberValue: string): Promise<PhoneNumber | undefined> => {
      try {
-        const { numberSettings } = getSettings();
         const data = await twilioFetch(`IncomingPhoneNumbers?PhoneNumber=${encodeURIComponent(numberValue)}`);
         const twilioNumbers = data.incoming_phone_numbers || [];
         if (twilioNumbers.length > 0) {
-            return mapTwilioNumberToPhoneNumber(twilioNumbers[0], numberSettings);
+            return mapTwilioNumberToPhoneNumber(twilioNumbers[0]);
         }
         return undefined;
     } catch (error) {

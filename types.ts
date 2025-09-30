@@ -50,11 +50,5 @@ export interface Settings {
     twilioAuthToken: string;
     adminUsername: string;
     adminPassword: string;
-    numberSettings: {
-        [numberSid: string]: {
-            country?: string;
-            enabled?: boolean;
-            countryCode?: string;
-        }
-    };
+    publicNumbers: PhoneNumber[];
 }

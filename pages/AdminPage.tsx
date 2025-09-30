@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { logout, updateCredentials } from '../services/authService';
-import { getSettings, saveSettings, applyTheme, updateNumberSettings } from '../services/settingsService';
+import { getSettings, saveSettings, applyTheme } from '../services/settingsService';
 import { getOwnedNumbers, getWebhookLogs } from '../services/twilioService';
 import { navigate } from '../services/navigationService';
 import type { Settings, PhoneNumber, FooterLink, WebhookLog } from '../types';
@@ -248,19 +248,26 @@ async function handleRequest(request) {
 };
 
 const NumbersPanel: React.FC = () => {
-    const [numbers, setNumbers] = useState<PhoneNumber[]>([]);
+    const [publicNumbers, setPublicNumbers] = useState<PhoneNumber[]>([]);
+    const [availableTwilioNumbers, setAvailableTwilioNumbers] = useState<PhoneNumber[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [editingSid, setEditingSid] = useState<string | null>(null);
     const [editFormData, setEditFormData] = useState<{ country: string; enabled: boolean; countryCode: string }>({ country: '', enabled: true, countryCode: '' });
 
-
     const fetchNumbers = async () => {
         setIsLoading(true);
         setError(null);
         try {
-            const data = await getOwnedNumbers();
-            setNumbers(data.sort((a,b) => a.number.localeCompare(b.number)));
+            const currentSettings = getSettings();
+            const savedPublicNumbers = currentSettings.publicNumbers || [];
+            setPublicNumbers(savedPublicNumbers.sort((a,b) => a.number.localeCompare(b.number)));
+
+            const allTwilioNumbers = await getOwnedNumbers();
+            
+            const publicSids = new Set(savedPublicNumbers.map(n => n.id));
+            const available = allTwilioNumbers.filter(n => !publicSids.has(n.id));
+            setAvailableTwilioNumbers(available.sort((a,b) => a.number.localeCompare(b.number)));
         } catch (err: any) {
             console.error("Failed to fetch numbers", err);
             setError(err.message || 'An unknown error occurred.');
@@ -285,12 +292,6 @@ const NumbersPanel: React.FC = () => {
     const handleCancel = () => {
         setEditingSid(null);
     };
-
-    const handleSave = (sid: string) => {
-        updateNumberSettings(sid, editFormData);
-        setEditingSid(null);
-        fetchNumbers(); // Re-fetch to show updated data
-    };
     
     const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target;
@@ -299,7 +300,51 @@ const NumbersPanel: React.FC = () => {
             [name]: type === 'checkbox' ? checked : value
         }));
     };
+    
+    const handleSave = (sid: string) => {
+        const currentSettings = getSettings();
+        const updatedPublicNumbers = currentSettings.publicNumbers.map(num => 
+            num.id === sid 
+                ? { ...num, ...editFormData, countryCode: editFormData.countryCode.toUpperCase() } 
+                : num
+        );
+        saveSettings({ ...currentSettings, publicNumbers: updatedPublicNumbers });
+        setEditingSid(null);
+        fetchNumbers();
+    };
 
+    const handleAddNumber = (numberToAdd: PhoneNumber) => {
+        const currentSettings = getSettings();
+        const updatedPublicNumbers = [...currentSettings.publicNumbers, { ...numberToAdd, enabled: true }];
+        saveSettings({ ...currentSettings, publicNumbers: updatedPublicNumbers });
+        fetchNumbers();
+    };
+
+    const handleRemoveNumber = (sidToRemove: string) => {
+        if (window.confirm('Are you sure you want to remove this number from the public site? It can be re-added later.')) {
+            const currentSettings = getSettings();
+            const updatedPublicNumbers = currentSettings.publicNumbers.filter(n => n.id !== sidToRemove);
+            saveSettings({ ...currentSettings, publicNumbers: updatedPublicNumbers });
+            fetchNumbers();
+        }
+    };
+
+    const renderErrorState = () => (
+         <div className="text-center p-4">
+            <p className="font-semibold text-red-500 mb-2">Could not load numbers from Twilio</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{error}</p>
+            {error?.includes('proxy') && (
+                <div className="mt-4 p-4 bg-blue-100 dark:bg-blue-900/30 rounded-md text-left">
+                    <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">How to fix this:</p>
+                    <ol className="list-decimal list-inside text-sm text-blue-700 dark:text-blue-300 mt-2">
+                        <li>Open this link: <a href="https://cors-anywhere.herokuapp.com/" target="_blank" rel="noopener noreferrer" className="font-bold text-blue-600 dark:text-blue-400 hover:underline">Activate Proxy</a></li>
+                        <li>Click the button to "Request temporary access".</li>
+                        <li>Come back here and click the Refresh button above.</li>
+                    </ol>
+                </div>
+            )}
+        </div>
+    );
 
     return (
         <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md">
@@ -315,107 +360,85 @@ const NumbersPanel: React.FC = () => {
                     <span className="text-sm font-medium hidden sm:inline">Refresh</span>
                 </button>
             </div>
-             <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                Enable or disable numbers on the public site and set a custom display name or flag.
-            </p>
-            <div className="space-y-3">
-                {isLoading ? (
-                    <p className="text-slate-500">Loading numbers...</p>
-                ) : error ? (
-                    <div className="text-center p-4">
-                        <p className="font-semibold text-red-500 mb-2">Could not load numbers</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{error}</p>
-                        {error.includes('proxy') && (
-                            <div className="mt-4 p-4 bg-blue-100 dark:bg-blue-900/30 rounded-md text-left">
-                                <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">How to fix this:</p>
-                                <ol className="list-decimal list-inside text-sm text-blue-700 dark:text-blue-300 mt-2">
-                                    <li>Open this link: <a href="https://cors-anywhere.herokuapp.com/" target="_blank" rel="noopener noreferrer" className="font-bold text-blue-600 dark:text-blue-400 hover:underline">Activate Proxy</a></li>
-                                    <li>Click the button to "Request temporary access".</li>
-                                    <li>Come back here and click the Refresh button above.</li>
-                                </ol>
-                            </div>
-                        )}
-                    </div>
-                ) : numbers.length > 0 ? (
-                    numbers.map(num => (
-                        <div key={num.id} className="p-3 bg-slate-100 dark:bg-slate-700/50 rounded-md transition-all duration-300">
-                             {editingSid === num.id ? (
-                                // Edit View
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div>
-                                            <label htmlFor={`country-${num.id}`} className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Display Name / Country</label>
-                                            <input 
-                                                type="text" 
-                                                id={`country-${num.id}`}
-                                                name="country" 
-                                                value={editFormData.country} 
-                                                onChange={handleFormChange}
-                                                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none"
-                                            />
+            
+             {isLoading ? <p className="text-slate-500">Loading numbers...</p> : error ? renderErrorState() : (
+                 <div className="space-y-8">
+                     {/* Your Public Numbers */}
+                     <div>
+                        <h3 className="text-md font-semibold text-slate-700 dark:text-slate-300 mb-2">Your Public Numbers ({publicNumbers.length})</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                            These numbers are visible on your website. Edit them to change their display name or disable them temporarily.
+                        </p>
+                        <div className="space-y-3">
+                            {publicNumbers.length > 0 ? publicNumbers.map(num => (
+                                <div key={num.id} className="p-3 bg-slate-100 dark:bg-slate-700/50 rounded-md transition-all duration-300">
+                                    {editingSid === num.id ? (
+                                        <div className="space-y-4">
+                                            {/* Edit Form */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label htmlFor={`country-${num.id}`} className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Display Name / Country</label>
+                                                    <input type="text" id={`country-${num.id}`} name="country" value={editFormData.country} onChange={handleFormChange} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" />
+                                                </div>
+                                                <div>
+                                                    <label htmlFor={`countryCode-${num.id}`} className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Country Code (Flag)</label>
+                                                    <input type="text" id={`countryCode-${num.id}`} name="countryCode" value={editFormData.countryCode} onChange={handleFormChange} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none uppercase" placeholder="e.g., US, GB, CA" maxLength={2} />
+                                                    <p className="text-xs text-slate-500 mt-1">2-letter ISO code. <a href="https://www.iso.org/obp/ui/#search/code/" target="_blank" rel="noopener noreferrer" className="text-teal-500 hover:underline">List</a>.</p>
+                                                </div>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" name="enabled" checked={editFormData.enabled} onChange={handleFormChange} className="sr-only peer" />
+                                                <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-500 peer-checked:bg-teal-600"></div>
+                                                <span className="ml-3 text-sm font-medium text-slate-700 dark:text-slate-300">{editFormData.enabled ? 'Enabled' : 'Disabled'} on Public Site</span>
+                                            </label>
+                                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-600">
+                                                <button onClick={handleCancel} className="px-3 py-1.5 text-sm bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-700 dark:text-slate-200 font-semibold rounded-md">Cancel</button>
+                                                <button onClick={() => handleSave(num.id)} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-md"><SaveIcon className="w-4 h-4" /> Save</button>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label htmlFor={`countryCode-${num.id}`} className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Country Code (Flag)</label>
-                                            <input 
-                                                type="text" 
-                                                id={`countryCode-${num.id}`}
-                                                name="countryCode" 
-                                                value={editFormData.countryCode} 
-                                                onChange={handleFormChange}
-                                                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none uppercase"
-                                                placeholder="e.g., US, GB, CA"
-                                                maxLength={2}
-                                            />
-                                            <p className="text-xs text-slate-500 mt-1">2-letter ISO code. <a href="https://www.iso.org/obp/ui/#search/code/" target="_blank" rel="noopener noreferrer" className="text-teal-500 hover:underline">List</a>.</p>
+                                    ) : (
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                                            {/* Display View */}
+                                            <div className="flex-grow">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${num.enabled ? 'bg-green-500' : 'bg-red-500'}`} title={num.enabled ? 'Enabled' : 'Disabled'}></span>
+                                                    <p className="font-mono font-semibold text-slate-800 dark:text-slate-200">{num.number}</p>
+                                                </div>
+                                                <p className="text-sm text-slate-500 dark:text-slate-400 ml-5">{num.country} {num.countryCode ? `(${num.countryCode.toUpperCase()})` : ''}</p>
+                                            </div>
+                                            <div className="mt-2 sm:mt-0 sm:ml-4 flex-shrink-0 flex items-center gap-2">
+                                                <button onClick={() => handleEdit(num)} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-md"><PencilIcon className="w-4 h-4" /> Edit</button>
+                                                <button onClick={() => handleRemoveNumber(num.id)} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold rounded-md"><TrashIcon className="w-4 h-4" /> Remove</button>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div>
-                                         <label className="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" name="enabled" checked={editFormData.enabled} onChange={handleFormChange} className="sr-only peer" />
-                                            <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-500 peer-checked:bg-teal-600"></div>
-                                            <span className="ml-3 text-sm font-medium text-slate-700 dark:text-slate-300">
-                                                {editFormData.enabled ? 'Enabled' : 'Disabled'} on Public Site
-                                            </span>
-                                        </label>
-                                    </div>
-                                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-600">
-                                        <button onClick={handleCancel} className="px-3 py-1.5 text-sm bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-700 dark:text-slate-200 font-semibold rounded-md">
-                                            Cancel
-                                        </button>
-                                        <button onClick={() => handleSave(num.id)} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-md">
-                                            <SaveIcon className="w-4 h-4" /> Save
-                                        </button>
-                                    </div>
+                                    )}
                                 </div>
-                            ) : (
-                                // Display View
-                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                            )) : <p className="text-slate-500 dark:text-slate-400 text-center py-4 text-sm">You haven't added any numbers yet. Add one from the list below.</p>}
+                        </div>
+                     </div>
+                     
+                     {/* Available from Twilio */}
+                     <div>
+                        <h3 className="text-md font-semibold text-slate-700 dark:text-slate-300 mb-2">Available from Twilio ({availableTwilioNumbers.length})</h3>
+                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                           These numbers were found in your Twilio account but are not yet public on the site.
+                        </p>
+                        <div className="space-y-3">
+                             {availableTwilioNumbers.length > 0 ? availableTwilioNumbers.map(num => (
+                                <div key={num.id} className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-md flex flex-col sm:flex-row justify-between items-start sm:items-center">
                                     <div className="flex-grow">
-                                        <div className="flex items-center gap-2">
-                                            <span className={`w-2.5 h-2.5 rounded-full ${num.enabled ? 'bg-green-500' : 'bg-red-500'}`} title={num.enabled ? 'Enabled' : 'Disabled'}></span>
-                                            <p className="font-mono font-semibold text-slate-800 dark:text-slate-200">{num.number}</p>
-                                        </div>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 ml-4">{num.country} {num.countryCode ? `(${num.countryCode.toUpperCase()})` : ''}</p>
-                                        <div className="flex items-center gap-2 ml-4 mt-1.5" title="Webhook URL (configured in Twilio)">
-                                            <WebhookIcon className="w-4 h-4 text-slate-400 dark:text-slate-500 flex-shrink-0" />
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">
-                                                {num.webhookUrl || 'Not set'}
-                                            </p>
-                                        </div>
+                                        <p className="font-mono font-semibold text-slate-800 dark:text-slate-200">{num.number}</p>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">{num.country} {num.countryCode ? `(${num.countryCode.toUpperCase()})` : ''}</p>
                                     </div>
                                     <div className="mt-2 sm:mt-0 sm:ml-4 flex-shrink-0">
-                                         <button onClick={() => handleEdit(num)} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-md">
-                                            <PencilIcon className="w-4 h-4" /> Edit
-                                        </button>
+                                        <button onClick={() => handleAddNumber(num)} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-md"><PlusIcon className="w-4 h-4" /> Add to Site</button>
                                     </div>
                                 </div>
-                            )}
+                             )) : <p className="text-slate-500 dark:text-slate-400 text-center py-4 text-sm">No new numbers available in your Twilio account.</p>}
                         </div>
-                    ))
-                ) : (
-                    <p className="text-slate-500 text-center py-4">No numbers found for this account. Check credentials.</p>
-                )}
-            </div>
+                     </div>
+                 </div>
+             )}
         </div>
     );
 };
