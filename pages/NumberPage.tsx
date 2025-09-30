@@ -15,6 +15,8 @@ interface NumberPageProps {
   phoneNumber: string;
 }
 
+const REFRESH_INTERVAL_SECONDS = 15;
+
 const NumberPage: React.FC<NumberPageProps> = ({ phoneNumber }) => {
   const [numberDetails, setNumberDetails] = useState<PhoneNumber | null>(null);
   const [messages, setMessages] = useState<SMSMessage[]>([]);
@@ -22,6 +24,7 @@ const NumberPage: React.FC<NumberPageProps> = ({ phoneNumber }) => {
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<Settings>(getSettings());
   const [isCopied, setIsCopied] = useState(false);
+  const [countdown, setCountdown] = useState(REFRESH_INTERVAL_SECONDS);
 
   const fetchMessages = useCallback(async (showLoader: boolean = true) => {
     if (showLoader) setIsLoading(true);
@@ -76,12 +79,18 @@ const NumberPage: React.FC<NumberPageProps> = ({ phoneNumber }) => {
 
   }, [phoneNumber, fetchMessages]);
 
-  // Auto-refresh messages
+  // Auto-refresh messages with countdown
   useEffect(() => {
-    const refreshInterval = setInterval(() => {
-      fetchMessages(false);
-    }, 3000); // Refresh every 3 seconds
-    return () => clearInterval(refreshInterval);
+    const timer = setInterval(() => {
+        setCountdown(prev => {
+            if (prev <= 1) {
+                fetchMessages(false);
+                return REFRESH_INTERVAL_SECONDS;
+            }
+            return prev - 1;
+        });
+    }, 1000);
+    return () => clearInterval(timer);
   }, [fetchMessages]);
 
   const handleCopyNumber = () => {
@@ -90,6 +99,12 @@ const NumberPage: React.FC<NumberPageProps> = ({ phoneNumber }) => {
         setIsCopied(true);
         setTimeout(() => setIsCopied(false), 2000);
     });
+  };
+
+  const handleManualRefresh = () => {
+    if (isLoading) return;
+    setCountdown(REFRESH_INTERVAL_SECONDS);
+    fetchMessages(true);
   };
 
   const renderContent = () => {
@@ -164,12 +179,12 @@ const NumberPage: React.FC<NumberPageProps> = ({ phoneNumber }) => {
                     Back to All Numbers
                 </a>
                 <button
-                    onClick={() => fetchMessages(true)}
+                    onClick={handleManualRefresh}
                     disabled={isLoading}
                     className="flex items-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 disabled:bg-slate-300 dark:disabled:bg-slate-800 disabled:cursor-not-allowed text-slate-700 dark:text-slate-200 rounded-md transition-colors"
                 >
                     <RefreshIcon className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
-                    Refresh
+                    Refresh {!isLoading && `(${countdown}s)`}
                 </button>
             </div>
 

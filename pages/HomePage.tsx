@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { PhoneNumber, Settings } from '../types';
 import { getAvailableNumbers } from '../services/smsService';
 import { getSettings } from '../services/settingsService';
@@ -7,12 +7,14 @@ import Header from '../components/Header';
 import PhoneNumberCard from '../components/PhoneNumberCard';
 import Footer from '../components/Footer';
 import AdsenseAd from '../components/AdsenseAd';
+import { RefreshIcon } from '../components/icons/RefreshIcon';
 
 const HomePage: React.FC = () => {
   const [numbers, setNumbers] = useState<PhoneNumber[]>([]);
   const [settings, setSettings] = useState<Settings>(getSettings());
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   useEffect(() => {
     updateMetadata({
@@ -22,8 +24,7 @@ const HomePage: React.FC = () => {
     });
   }, [settings]);
 
-  useEffect(() => {
-    const fetchNumbers = async () => {
+  const fetchNumbers = useCallback(async () => {
       try {
         // Only show numbers that are explicitly enabled
         const numbersData = (await getAvailableNumbers()).filter(n => n.enabled);
@@ -33,13 +34,17 @@ const HomePage: React.FC = () => {
       } catch (err: any) {
         setError(err.message || 'Failed to fetch phone numbers.');
         console.error(err);
-      } finally {
-        setIsLoading(false);
       }
+  }, []);
+
+  useEffect(() => {
+    const loadInitialNumbers = async () => {
+        setIsLoading(true);
+        await fetchNumbers();
+        setIsLoading(false);
     };
     
-    fetchNumbers(); // Initial fetch
-    const numberInterval = setInterval(fetchNumbers, 5000); // Poll for new activity
+    loadInitialNumbers();
     
     const handleSettingsChange = () => {
         setSettings(getSettings());
@@ -48,10 +53,15 @@ const HomePage: React.FC = () => {
 
 
     return () => {
-        clearInterval(numberInterval);
         window.removeEventListener('settingsChanged', handleSettingsChange);
     };
-  }, []);
+  }, [fetchNumbers]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchNumbers();
+    setIsRefreshing(false);
+  };
   
   const renderNumberList = () => {
     if (isLoading) {
@@ -121,7 +131,19 @@ const HomePage: React.FC = () => {
     <div className="flex flex-col min-h-screen">
       <Header title={settings.title} description={settings.description} showAdminLink={true} />
       <main className="flex-grow container mx-auto p-4 md:p-6">
-        <h2 className="text-xl font-bold text-slate-700 dark:text-slate-300 mb-4 px-2">Select a number to view messages</h2>
+        <div className="flex justify-between items-center mb-4 px-2">
+            <h2 className="text-xl font-bold text-slate-700 dark:text-slate-300">Select a number to view messages</h2>
+            <button
+                onClick={handleRefresh}
+                disabled={isRefreshing || isLoading}
+                className="flex items-center gap-2 p-2 rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-teal-500 dark:hover:text-teal-400 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                title="Refresh number activity"
+                aria-label="Refresh number activity"
+            >
+                <RefreshIcon className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span className="text-sm font-medium hidden sm:inline">Refresh</span>
+            </button>
+        </div>
         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg overflow-hidden border border-slate-200 dark:border-slate-700/50">
             {renderNumberList()}
         </div>
