@@ -126,7 +126,7 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title={settings.title} showAdminLink={true} />
+      <Header title={settings.title} links={settings.footerLinks} showAdminLink={true} />
       <main className="flex-grow container mx-auto p-4 md:p-6">
         <div className="text-center py-8 md:py-12">
             <h1 className="text-4xl md:text-5xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">

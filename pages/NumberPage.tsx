@@ -159,7 +159,7 @@ const NumberPage: React.FC<NumberPageProps> = ({ phoneNumber }) => {
 
   return (
     <div className="flex flex-col min-h-screen">
-        <Header title={settings.title} />
+        <Header title={settings.title} links={settings.footerLinks} showAdminLink={true} />
         <main className="flex-grow container mx-auto p-4 md:p-6 flex flex-col">
             <div className="flex-shrink-0 flex items-center justify-between mb-4">
                 <a

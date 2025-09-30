@@ -61,7 +61,7 @@ const TextContentPage: React.FC<TextContentPageProps> = ({ title, content }) => 
 
     return (
         <div className="flex flex-col min-h-screen">
-            <Header title={settings.title} />
+            <Header title={settings.title} links={settings.footerLinks} showAdminLink={true} />
             <main className="flex-grow container mx-auto p-4 md:p-6">
                 <div className="max-w-4xl mx-auto">
                      <div className="mb-6">
