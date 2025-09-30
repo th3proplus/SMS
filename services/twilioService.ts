@@ -1,6 +1,56 @@
 import type { PhoneNumber, SMSMessage, Settings, WebhookLog } from '../types';
 import { getSettings } from './settingsService';
 
+// --- DEMO DATA ---
+export const demoNumbers: PhoneNumber[] = [
+    {
+      id: 'demo-us-1',
+      number: '+1 201 555 0123',
+      country: 'United States (Demo)',
+      countryCode: 'US',
+      lastMessageAt: new Date(Date.now() - 1000 * 60 * 2), // 2 minutes ago
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30), // 30 days ago
+      webhookUrl: '',
+      enabled: true,
+    },
+    {
+      id: 'demo-gb-1',
+      number: '+44 7700 900123',
+      country: 'United Kingdom (Demo)',
+      countryCode: 'GB',
+      lastMessageAt: new Date(Date.now() - 1000 * 60 * 15), // 15 minutes ago
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 60), // 60 days ago
+      webhookUrl: '',
+      enabled: true,
+    },
+    {
+      id: 'demo-fr-1',
+      number: '+33 6 55 55 01 23',
+      country: 'France (Demo)',
+      countryCode: 'FR',
+      lastMessageAt: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 90), // 90 days ago
+      webhookUrl: '',
+      enabled: false,
+    },
+  ];
+  
+const demoMessages: { [key: string]: SMSMessage[] } = {
+    '+1 201 555 0123': [
+        { id: 'msg-demo-1', from: 'Verify', body: 'Your verification code is 123456.', receivedAt: new Date(Date.now() - 1000 * 60 * 2) },
+        { id: 'msg-demo-2', from: 'Alert', body: 'Your package will be delivered today.', receivedAt: new Date(Date.now() - 1000 * 60 * 60 * 1) },
+        { id: 'msg-demo-3', from: 'SocialApp', body: 'You have a new friend request!', receivedAt: new Date(Date.now() - 1000 * 60 * 60 * 5) },
+    ],
+    '+44 7700 900123': [
+        { id: 'msg-demo-4', from: 'Auth', body: 'Your login code is: 987-654', receivedAt: new Date(Date.now() - 1000 * 60 * 15) },
+        { id: 'msg-demo-5', from: 'HMRC', body: 'Reminder: Your tax return is due by 31 January.', receivedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2) },
+    ],
+    '+33 6 55 55 01 23': [
+        { id: 'msg-demo-6', from: 'LaPoste', body: 'Votre colis est en cours de livraison. Suivez-le ici: https://example.com', receivedAt: new Date(Date.now() - 1000 * 60 * 60 * 3) },
+        { id: 'msg-demo-7', from: 'Doctolib', body: 'Votre rendez-vous est confirmé pour demain à 10h00.', receivedAt: new Date(Date.now() - 1000 * 60 * 60 * 22) },
+    ],
+};
+
 // --- CACHING HELPERS ---
 
 const CACHE_KEY_NUMBERS = 'sms_receiver_numbers_cache';
@@ -233,6 +283,10 @@ export const getOwnedNumbers = async (): Promise<PhoneNumber[]> => {
 };
 
 export const getNumberByValue = async (numberValue: string): Promise<PhoneNumber | undefined> => {
+     const demoNumber = demoNumbers.find(n => n.number === numberValue);
+     if (demoNumber) {
+         return demoNumber;
+     }
      try {
         const data = await twilioFetch(`IncomingPhoneNumbers?PhoneNumber=${encodeURIComponent(numberValue)}`);
         const twilioNumbers = data.incoming_phone_numbers || [];
@@ -247,6 +301,10 @@ export const getNumberByValue = async (numberValue: string): Promise<PhoneNumber
 }
 
 export const getMessagesForNumber = async (phoneNumber: string): Promise<SMSMessage[]> => {
+    const demoMsgs = demoMessages[phoneNumber];
+    if (demoMsgs) {
+        return demoMsgs;
+    }
     try {
         const data = await twilioFetch(`Messages?To=${encodeURIComponent(phoneNumber)}&PageSize=50`);
         const twilioMessages = data.messages || [];

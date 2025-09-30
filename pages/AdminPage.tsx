@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { logout, updateCredentials } from '../services/authService';
 import { getSettings, saveSettings, applyTheme } from '../services/settingsService';
-import { getOwnedNumbers, getWebhookLogs } from '../services/twilioService';
+import { getOwnedNumbers, getWebhookLogs, demoNumbers } from '../services/twilioService';
 import { navigate } from '../services/navigationService';
 import type { Settings, PhoneNumber, FooterLink, WebhookLog } from '../types';
 import { AdminIcon } from '../components/icons/AdminIcon';
@@ -254,39 +254,6 @@ const NumbersPanel: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [editingSid, setEditingSid] = useState<string | null>(null);
     const [editFormData, setEditFormData] = useState<{ country: string; enabled: boolean; countryCode: string }>({ country: '', enabled: true, countryCode: '' });
-
-    const demoNumbers: PhoneNumber[] = [
-      {
-        id: 'demo-us-1',
-        number: '+1 201 555 0123',
-        country: 'United States (Demo)',
-        countryCode: 'US',
-        lastMessageAt: new Date(Date.now() - 1000 * 60 * 5), // 5 minutes ago
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30), // 30 days ago
-        webhookUrl: '',
-        enabled: true,
-      },
-      {
-        id: 'demo-gb-1',
-        number: '+44 7700 900123',
-        country: 'United Kingdom (Demo)',
-        countryCode: 'GB',
-        lastMessageAt: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 60), // 60 days ago
-        webhookUrl: '',
-        enabled: true,
-      },
-      {
-        id: 'demo-fr-1',
-        number: '+33 6 55 55 01 23',
-        country: 'France (Demo)',
-        countryCode: 'FR',
-        lastMessageAt: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 90), // 90 days ago
-        webhookUrl: '',
-        enabled: false,
-      },
-    ];
 
     const fetchNumbers = async () => {
         setIsLoading(true);
