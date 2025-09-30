@@ -35,6 +35,17 @@ export const getSettings = (): Settings => {
         const storedSettings = localStorage.getItem(SETTINGS_KEY);
         if (storedSettings) {
             const parsed = JSON.parse(storedSettings);
+            
+            // Fix: Re-hydrate Date objects for phone numbers, which get stringified in localStorage.
+            // This prevents crashes when sorting or formatting dates from cached settings.
+            if (parsed.publicNumbers && Array.isArray(parsed.publicNumbers)) {
+                parsed.publicNumbers = parsed.publicNumbers.map((num: any) => ({
+                    ...num,
+                    lastMessageAt: new Date(num.lastMessageAt),
+                    createdAt: new Date(num.createdAt),
+                }));
+            }
+
             // Create a new object by layering defaults, then parsed data, then deep-merge specific complex objects
             const mergedSettings = { 
                 ...defaultSettings, 
@@ -46,6 +57,7 @@ export const getSettings = (): Settings => {
                 ...(parsed.ads || {})
             };
             mergedSettings.footerLinks = parsed.footerLinks || defaultSettings.footerLinks;
+            // We've already processed publicNumbers, so we can just assign it
             mergedSettings.publicNumbers = parsed.publicNumbers || defaultSettings.publicNumbers;
 
             return mergedSettings;
