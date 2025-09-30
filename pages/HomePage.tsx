@@ -9,10 +9,20 @@ import Footer from '../components/Footer';
 import AdsenseAd from '../components/AdsenseAd';
 
 const HomePage: React.FC = () => {
-  const [numbers, setNumbers] = useState<PhoneNumber[]>([]);
   const [settings, setSettings] = useState<Settings>(getSettings());
+  
+  // Initialize with cached numbers for an instant "app-like" loading experience.
+  // The useEffect below will still fire to fetch the latest data.
+  const initialNumbers = (settings.publicNumbers || []).filter(n => n.enabled);
+  const [numbers, setNumbers] = useState<PhoneNumber[]>(
+    initialNumbers.sort((a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime())
+  );
+  
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  // Only show the main "Loading..." indicator if there are no cached numbers to display.
+  // This prevents a flash of the loading text on subsequent visits.
+  const [isLoading, setIsLoading] = useState(initialNumbers.length === 0);
   
   useEffect(() => {
     updateMetadata({

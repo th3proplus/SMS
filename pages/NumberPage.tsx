@@ -52,7 +52,13 @@ const NumberPage: React.FC<NumberPageProps> = ({ phoneNumber }) => {
         try {
             const details = await getNumberByValue(phoneNumber);
             if (details) {
-                setNumberDetails(details);
+                // Find the user-configured display details from settings, if they exist
+                const settingsNumber = getSettings().publicNumbers.find(n => n.id === details.id);
+                setNumberDetails({
+                    ...details,
+                    country: settingsNumber?.country || details.country,
+                    countryCode: settingsNumber?.countryCode || details.countryCode,
+                });
             } else {
                 setError(`Phone number ${phoneNumber} not found.`);
             }
@@ -174,25 +180,51 @@ const NumberPage: React.FC<NumberPageProps> = ({ phoneNumber }) => {
             </div>
 
             <div className="flex flex-col flex-grow bg-white dark:bg-slate-800/50 rounded-lg shadow-lg overflow-hidden">
-                <div className="flex-shrink-0 p-4 border-b border-slate-200 dark:border-slate-700">
-                    <div className="flex flex-wrap items-center gap-3">
-                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-300">
-                            Messages for: <span className="font-mono text-teal-600 dark:text-teal-400">{numberDetails?.number || '...'}</span>
-                        </h2>
-                        {numberDetails && (
-                            <div className="relative">
-                                <button
-                                    onClick={handleCopyNumber}
-                                    className="p-2 rounded-full bg-slate-200 dark:bg-slate-700/50 hover:bg-slate-300 dark:hover:bg-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-teal-500 dark:hover:text-teal-400 transition-colors"
-                                    title="Copy Number"
-                                >
-                                    <CopyIcon className="w-5 h-5" />
-                                </button>
-                                {isCopied && <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-teal-500 text-white rounded px-2 py-1 whitespace-nowrap">Copied!</span>}
+                <div className="flex-shrink-0 p-6 text-center border-b border-slate-200 dark:border-slate-700">
+                    {numberDetails ? (
+                        <>
+                            <div className="flex justify-center items-center gap-3 mb-2">
+                                {numberDetails.countryCode ? (
+                                    <img 
+                                        src={`https://flagcdn.com/w40/${numberDetails.countryCode.toLowerCase()}.png`} 
+                                        alt={`${numberDetails.country} flag`} 
+                                        className="w-10 h-auto rounded-md shadow"
+                                        />
+                                ) : (
+                                    <div className="w-10 h-6 bg-slate-200 dark:bg-slate-700 rounded-md shadow flex items-center justify-center flex-shrink-0" title="Country not specified">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9V3" />
+                                        </svg>
+                                    </div>
+                                )}
+                                <p className="text-lg text-slate-600 dark:text-slate-300">{numberDetails.country}</p>
                             </div>
-                        )}
-                    </div>
-                    {numberDetails && <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Inbox for {numberDetails.country}</p>}
+                            <div className="flex justify-center items-center gap-3 relative">
+                                <h1 className="font-mono font-bold text-3xl md:text-4xl text-slate-800 dark:text-slate-100 tracking-wider">
+                                    {numberDetails.number}
+                                </h1>
+                                <div className="relative">
+                                    <button
+                                        onClick={handleCopyNumber}
+                                        className="p-2 rounded-full bg-slate-200 dark:bg-slate-700/50 hover:bg-slate-300 dark:hover:bg-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-teal-500 dark:hover:text-teal-400 transition-colors"
+                                        title="Copy Number"
+                                    >
+                                        <CopyIcon className="w-6 h-6" />
+                                    </button>
+                                    {isCopied && <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-teal-500 text-white rounded px-2 py-1 whitespace-nowrap">Copied!</span>}
+                                </div>
+                            </div>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                                This is a temporary number. Messages are public. Refresh to see new messages.
+                            </p>
+                        </>
+                    ) : (
+                        <div className="animate-pulse">
+                            <div className="h-6 w-32 bg-slate-300 dark:bg-slate-700 rounded-md mx-auto mb-3"></div>
+                            <div className="h-10 w-64 bg-slate-300 dark:bg-slate-700 rounded-md mx-auto"></div>
+                            <div className="h-4 w-48 bg-slate-300 dark:bg-slate-700 rounded-md mx-auto mt-3"></div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="p-4 border-b border-slate-200 dark:border-slate-700">
