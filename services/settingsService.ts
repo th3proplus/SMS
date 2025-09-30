@@ -22,6 +22,7 @@ const defaultSettings: Settings = {
         numberPageTopAd: '',
         numberPageInFeedAd: '',
     },
+    proxyUrl: '',
     twilioAccountSid: 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
     twilioAuthToken: '',
     adminUsername: 'admin',

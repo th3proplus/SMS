@@ -45,6 +45,7 @@ export interface Settings {
         numberPageTopAd: string;
         numberPageInFeedAd: string;
     };
+    proxyUrl: string;
     twilioAccountSid: string;
     twilioAuthToken: string;
     adminUsername: string;

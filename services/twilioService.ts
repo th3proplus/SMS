@@ -1,6 +1,46 @@
 import type { PhoneNumber, SMSMessage, Settings, WebhookLog } from '../types';
 import { getSettings } from './settingsService';
 
+// --- CACHING HELPERS ---
+
+const CACHE_KEY_NUMBERS = 'sms_receiver_numbers_cache';
+
+/**
+ * Retrieves cached phone numbers from localStorage.
+ * @returns {PhoneNumber[]} An array of phone numbers, or an empty array if cache is empty/invalid.
+ */
+const getCachedNumbers = (): PhoneNumber[] => {
+    try {
+        const cachedData = localStorage.getItem(CACHE_KEY_NUMBERS);
+        if (!cachedData) return [];
+        
+        const parsed = JSON.parse(cachedData) as any[];
+        // Re-hydrate Date objects from their string representation in JSON
+        return parsed.map(num => ({
+            ...num,
+            lastMessageAt: new Date(num.lastMessageAt),
+            createdAt: new Date(num.createdAt),
+        }));
+    } catch (error) {
+        console.error("Failed to read or parse cached numbers:", error);
+        localStorage.removeItem(CACHE_KEY_NUMBERS); // Clear corrupted cache
+        return [];
+    }
+};
+
+/**
+ * Saves a list of phone numbers to the localStorage cache.
+ * @param {PhoneNumber[]} numbers The array of numbers to cache.
+ */
+const cacheNumbers = (numbers: PhoneNumber[]): void => {
+    try {
+        localStorage.setItem(CACHE_KEY_NUMBERS, JSON.stringify(numbers));
+    } catch (error) {
+        console.error("Failed to cache numbers:", error);
+    }
+};
+
+
 // --- TWILIO API HELPERS ---
 
 const API_BASE = 'https://api.twilio.com/2010-04-01';
@@ -21,19 +61,15 @@ const areTwilioCredentialsConfigured = (): boolean => {
 };
 
 // This function performs the fetch call to the Twilio API with Basic Auth.
-// WARNING: This is insecure on the client-side and is for demonstration purposes only.
-//
-// The public CORS proxy (cors-anywhere.herokuapp.com) used here is rate-limited and not
-// suitable for production. It may require a one-time visit to its landing page to activate
-// before use. For a real application, all API calls must be proxied through your own backend.
+// A proxy is required to bypass browser CORS restrictions. The default public proxy
+// is unreliable. Users can specify their own in the settings for a permanent solution.
 async function twilioFetch(endpoint: string, options: RequestInit = {}): Promise<any> {
-    const { twilioAccountSid, twilioAuthToken } = getSettings();
+    const { twilioAccountSid, twilioAuthToken, proxyUrl } = getSettings();
     
     if (!areTwilioCredentialsConfigured()) {
         throw new Error('Twilio credentials are not configured or are invalid.');
     }
     
-    // Using a CORS proxy for development. In production, this logic must be on a server.
     // Fix: Correctly append .json before query parameters.
     const queryIndex = endpoint.indexOf('?');
     let resource = endpoint;
@@ -49,7 +85,11 @@ async function twilioFetch(endpoint: string, options: RequestInit = {}): Promise
     const headers = new Headers(options.headers);
     headers.set('Authorization', 'Basic ' + btoa(`${twilioAccountSid}:${twilioAuthToken}`));
 
-    const response = await fetch(`https://cors-anywhere.herokuapp.com/${url}`, { ...options, headers });
+    const proxyBase = proxyUrl.trim() || 'https://cors-anywhere.herokuapp.com';
+    // Ensure there's no double slash if proxyUrl ends with one
+    const finalProxyUrl = proxyBase.endsWith('/') ? proxyBase.slice(0, -1) : proxyBase;
+
+    const response = await fetch(`${finalProxyUrl}/${url}`, { ...options, headers });
 
     if (!response.ok) {
         let errorMessage: string;
@@ -162,10 +202,8 @@ export const getTwilioConfig = (): Promise<{
 
 export const getOwnedNumbers = async (): Promise<PhoneNumber[]> => {
     if (!areTwilioCredentialsConfigured()) {
-        // Silently fail for the homepage to avoid showing a scary error on first load.
-        // A message will appear on the homepage indicating no numbers were found.
-        console.warn('Twilio credentials are not configured. Skipping fetch for owned numbers.');
-        return [];
+        console.warn('Twilio credentials not configured. Attempting to load numbers from cache.');
+        return getCachedNumbers();
     }
     
     try {
@@ -192,10 +230,17 @@ export const getOwnedNumbers = async (): Promise<PhoneNumber[]> => {
                 return number;
             })
         );
+        
+        cacheNumbers(numbersWithActivity); // Cache the fresh data on successful fetch
         return numbersWithActivity;
 
     } catch (error) {
-        console.error("Failed to fetch owned numbers from Twilio:", error);
+        console.error("Failed to fetch owned numbers from Twilio, falling back to cache:", error);
+        const cachedNumbers = getCachedNumbers();
+        if (cachedNumbers.length > 0) {
+            return cachedNumbers; // Return cached data on failure
+        }
+        // Only throw an error if the API fails AND the cache is empty
         throw error; 
     }
 };

@@ -19,6 +19,7 @@ import { RefreshIcon } from '../components/icons/RefreshIcon';
 import { SaveIcon } from '../components/icons/SaveIcon';
 import { WebhookIcon } from '../components/icons/WebhookIcon';
 import { timeAgo } from '../utils/time';
+import { CopyIcon } from '../components/icons/CopyIcon';
 
 
 interface TabButtonProps {
@@ -49,6 +50,68 @@ const TabButton: React.FC<TabButtonProps> = ({ icon, label, tabName, activeTab, 
 const SettingsPanel: React.FC = () => {
     const [settings, setSettings] = useState<Settings>(getSettings());
     const [isSaving, setIsSaving] = useState(false);
+
+    const cloudflareWorkerCode = `
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request))
+})
+
+async function handleRequest(request) {
+  // Handle preflight OPTIONS requests for CORS
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+        'Access-Control-Max-Age': '86400', // Cache preflight for 1 day
+      },
+    });
+  }
+
+  const url = new URL(request.url);
+  
+  // The request to the worker will be like:
+  // https://my-proxy.workers.dev/https://api.twilio.com/2010-04-01/...
+  // We need to extract the target Twilio URL from the path.
+  let apiUrl = url.pathname.substring(1); // Remove leading '/'
+  if (url.search) {
+      apiUrl += url.search;
+  }
+  
+  // Security: Only allow requests to the Twilio API
+  if (!apiUrl.startsWith('https://api.twilio.com/')) {
+    return new Response('This proxy only forwards requests to api.twilio.com', { status: 403 });
+  }
+
+  // Create a new request to the target API
+  const newRequest = new Request(apiUrl, {
+    method: request.method,
+    headers: request.headers,
+    body: request.body,
+    redirect: 'follow'
+  });
+
+  try {
+    const response = await fetch(newRequest);
+    
+    // Create a new response with permissive CORS headers
+    const newHeaders = new Headers(response.headers);
+    newHeaders.set('Access-Control-Allow-Origin', '*');
+    newHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: newHeaders
+    });
+
+  } catch (e) {
+    return new Response('Error fetching from the target API.', { status: 502 });
+  }
+}
+`.trim();
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
@@ -124,6 +187,57 @@ const SettingsPanel: React.FC = () => {
                     </p>
                  </div>
             </div>
+
+            <div>
+                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-2 mb-4">API Proxy Configuration</h2>
+                <div className="p-4 mb-4 text-sm rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50">
+                    <span className="font-bold">Recommendation:</span> For a reliable and permanent solution to API disconnections, use a custom proxy. The default public proxy is rate-limited and not suitable for regular use.
+                </div>
+                <div className="space-y-4">
+                    <div>
+                        <label htmlFor="proxyUrl" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Custom Proxy URL</label>
+                        <input type="text" id="proxyUrl" name="proxyUrl" value={settings.proxyUrl} onChange={handleChange} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono" placeholder="https://my-proxy.workers.dev" />
+                        <p className="text-xs text-slate-500 mt-1">Leave blank to use the default public proxy (unreliable).</p>
+                    </div>
+                    <details className="group">
+                        <summary className="cursor-pointer text-sm font-medium text-teal-600 dark:text-teal-400 hover:underline">
+                            How to create your own free proxy in 5 minutes
+                        </summary>
+                        <div className="mt-2 p-4 bg-slate-100 dark:bg-slate-900/50 rounded-md border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-300">
+                            <p className="mb-3">You can deploy a simple and secure proxy for free using Cloudflare Workers. This will route your API requests reliably without hitting public limits.</p>
+                            <ol className="list-decimal list-inside space-y-2 mb-4">
+                                <li><a href="https://dash.cloudflare.com/?to=/:account/workers" target="_blank" rel="noopener noreferrer" className="font-semibold text-teal-500 hover:underline">Sign up or log in to Cloudflare</a> and go to the Workers section.</li>
+                                <li>Click "Create a Service", give it a name (e.g., `twilio-proxy`), and choose the "HTTP handler" starter.</li>
+                                <li>Click "Create service", then "Quick edit".</li>
+                                <li>Delete all the boilerplate code and paste the code below.</li>
+                                <li>Click "Save and Deploy". Your proxy URL will be shown at the top. Copy it and paste it into the field above.</li>
+                            </ol>
+                            <div className="relative">
+                                <button
+                                    onClick={(e) => { 
+                                        e.preventDefault(); 
+                                        navigator.clipboard.writeText(cloudflareWorkerCode); 
+                                        const button = e.currentTarget;
+                                        const originalText = button.title;
+                                        button.title = 'Copied!';
+                                        setTimeout(() => { button.title = originalText }, 2000);
+                                    }} 
+                                    className="absolute top-2 right-2 p-2 rounded-md bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-500 dark:text-slate-400" 
+                                    title="Copy code"
+                                >
+                                    <CopyIcon className="w-4 h-4" />
+                                </button>
+                                <pre className="bg-slate-200 dark:bg-slate-800 p-4 rounded-md text-xs font-mono overflow-x-auto">
+                                    <code>
+                                        {cloudflareWorkerCode}
+                                    </code>
+                                </pre>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+            </div>
+
              <div className="mt-6 text-right">
                 <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 bg-teal-600 text-white font-semibold rounded-md hover:bg-teal-700 disabled:bg-teal-800 disabled:cursor-wait">
                     {isSaving ? 'Saving...' : 'Save Settings'}
