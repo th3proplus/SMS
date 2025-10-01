@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { PhoneNumber, Settings, BlogPost } from '../types';
 import { getAvailableNumbers } from '../services/smsService';
-import { getLatestPosts, demoPosts } from '../services/wordpressService';
+import { getLatestPosts } from '../services/wordpressService';
 import { getSettings } from '../services/settingsService';
 import { updateMetadata } from '../services/seoService';
 import Header from '../components/Header';
@@ -48,31 +48,19 @@ const HomePage: React.FC = () => {
 
     const fetchBlogPosts = async () => {
         const currentSettings = getSettings();
-        if (!currentSettings.enableBlogSection) {
+        if (!currentSettings.enableBlogSection || !currentSettings.wordpressUrl) {
             setPosts([]);
             setIsBlogLoading(false);
-            setBlogError(null);
             return;
         }
-
         setIsBlogLoading(true);
         setBlogError(null);
-
-        // If URL is not set, just use demo posts immediately.
-        if (!currentSettings.wordpressUrl.trim()) {
-            setPosts(demoPosts);
-            setIsBlogLoading(false);
-            return;
-        }
-        
-        // If URL is set, try to fetch.
         try {
             const postsData = await getLatestPosts(3);
             setPosts(postsData);
         } catch (err: any) {
-            console.error("Blog fetch error:", err);
-            setPosts(demoPosts); // Fallback to demo posts
-            setBlogError('Could not connect to the blog. Showing demo articles instead.');
+            setBlogError('Could not load blog posts.');
+            console.error(err);
         } finally {
             setIsBlogLoading(false);
         }

@@ -49,23 +49,24 @@ const BlogSection: React.FC<BlogSectionProps> = ({ posts, isLoading, error }) =>
         );
     }
 
-    // Don't render if there are no posts to show (neither real nor demo).
-    if (!posts || posts.length === 0) {
-        return null;
+    if (error) {
+        return (
+             <div className="py-8 md:py-12 border-t border-slate-200 dark:border-slate-700 mt-8">
+                <h2 className="text-center text-3xl font-bold text-slate-800 dark:text-slate-200 tracking-tight mb-8">From Our Blog</h2>
+                <p className="text-center text-red-500">{error}</p>
+             </div>
+        );
+    }
+
+    if (posts.length === 0) {
+        return null; // Don't render anything if there are no posts
     }
 
     return (
         <div className="py-8 md:py-12 border-t border-slate-200 dark:border-slate-700 mt-8">
-            <h2 className="text-center text-3xl font-bold text-slate-800 dark:text-slate-200 tracking-tight mb-4">
+            <h2 className="text-center text-3xl font-bold text-slate-800 dark:text-slate-200 tracking-tight mb-8">
                 From Our Blog
             </h2>
-            {error && (
-                 <div className="max-w-2xl mx-auto mb-6">
-                    <p className="text-center text-sm text-yellow-800 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-md border border-yellow-200 dark:border-yellow-800/50">
-                        {error}
-                    </p>
-                </div>
-            )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {posts.map(post => (
                     <BlogPostCard key={post.id} post={post} />
