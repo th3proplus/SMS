@@ -5,6 +5,7 @@ import { navigate } from '../services/navigationService';
 const LoginPage: React.FC = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [rememberMe, setRememberMe] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -13,7 +14,7 @@ const LoginPage: React.FC = () => {
         setError(null);
         setIsLoading(true);
         try {
-            const success = await login(username, password);
+            const success = await login(username, password, rememberMe);
             if (success) {
                 navigate('/admin');
             } else {
@@ -71,6 +72,21 @@ const LoginPage: React.FC = () => {
                             className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none"
                             placeholder="password"
                         />
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                            <input
+                                id="remember-me"
+                                name="remember-me"
+                                type="checkbox"
+                                checked={rememberMe}
+                                onChange={(e) => setRememberMe(e.target.checked)}
+                                className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-slate-500 rounded bg-slate-700"
+                            />
+                            <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-400">
+                                Remember this device for 30 days
+                            </label>
+                        </div>
                     </div>
                     {error && <p className="text-sm text-red-400 text-center">{error}</p>}
                     <div>
