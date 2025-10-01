@@ -14,25 +14,29 @@ const App: React.FC = () => {
     const [settings, setSettings] = useState<Settings>(getSettings());
 
     useEffect(() => {
-        // Apply theme on initial load
-        applyTheme(settings.theme);
+        // Apply theme on initial load from the most recent settings
+        applyTheme(getSettings().theme);
 
         const handlePopState = () => {
             setPathname(window.location.pathname);
         };
         
         const handleSettingsChange = () => {
-            setSettings(getSettings());
+            const newSettings = getSettings();
+            setSettings(newSettings);
+            // Also apply the theme immediately when settings change
+            applyTheme(newSettings.theme);
         };
 
         window.addEventListener('popstate', handlePopState);
         window.addEventListener('settingsChanged', handleSettingsChange);
         
+        // The cleanup function removes the listeners when the component unmounts
         return () => {
             window.removeEventListener('popstate', handlePopState);
             window.removeEventListener('settingsChanged', handleSettingsChange);
         };
-    }, [settings.theme]);
+    }, []); // FIX: Use empty dependency array to run this effect only once on mount
 
     // Global link click handler for client-side routing
     useEffect(() => {
