@@ -14,9 +14,7 @@ const HomePage: React.FC = () => {
   const [settings, setSettings] = useState<Settings>(getSettings());
   
   const initialNumbers = (settings.publicNumbers || []).filter(n => n.enabled);
-  const [numbers, setNumbers] = useState<PhoneNumber[]>(
-    initialNumbers.sort((a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime())
-  );
+  const [numbers, setNumbers] = useState<PhoneNumber[]>(initialNumbers);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(initialNumbers.length === 0);
 
@@ -36,7 +34,7 @@ const HomePage: React.FC = () => {
     const fetchNumbers = async () => {
       try {
         const numbersData = (await getAvailableNumbers()).filter(n => n.enabled);
-        setNumbers(numbersData.sort((a,b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime()));
+        setNumbers(numbersData);
         setError(null);
       } catch (err: any) {
         setError(err.message || 'Failed to fetch phone numbers.');
@@ -48,21 +46,34 @@ const HomePage: React.FC = () => {
 
     const fetchBlogPosts = async () => {
         const currentSettings = getSettings();
-        if (!currentSettings.enableBlogSection || !currentSettings.wordpressUrl) {
+        // FIX: The condition was inverted, causing posts to be fetched when the blog was disabled.
+        if (currentSettings.enableBlogSection) {
+            // Use demo posts if enabled but no URL is set
+            if (currentSettings.wordpressUrl) {
+                setIsBlogLoading(true);
+                setBlogError(null);
+                try {
+                    const postsData = await getLatestPosts(3);
+                    setPosts(postsData);
+                } catch (err: any) {
+                    setBlogError('Could not load blog posts.');
+                    console.error(err);
+                    // Fallback to demo posts on error
+                    const { demoPosts } = await import('../services/wordpressService');
+                    setPosts(demoPosts);
+                } finally {
+                    setIsBlogLoading(false);
+                }
+            } else {
+                 const { demoPosts } = await import('../services/wordpressService');
+                 setPosts(demoPosts);
+                 setIsBlogLoading(false);
+                 setBlogError(null);
+            }
+        } else {
             setPosts([]);
             setIsBlogLoading(false);
-            return;
-        }
-        setIsBlogLoading(true);
-        setBlogError(null);
-        try {
-            const postsData = await getLatestPosts(3);
-            setPosts(postsData);
-        } catch (err: any) {
-            setBlogError('Could not load blog posts.');
-            console.error(err);
-        } finally {
-            setIsBlogLoading(false);
+            setBlogError(null);
         }
     };
     

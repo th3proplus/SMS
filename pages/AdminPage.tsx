@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { logout, updateCredentials } from '../services/authService';
 import { getSettings, saveSettings, applyTheme } from '../services/settingsService';
 import { getOwnedNumbers, getWebhookLogs, demoNumbers } from '../services/twilioService';
@@ -21,6 +21,7 @@ import { SaveIcon } from '../components/icons/SaveIcon';
 import { WebhookIcon } from '../components/icons/WebhookIcon';
 import { timeAgo } from '../utils/time';
 import { CopyIcon } from '../components/icons/CopyIcon';
+import { GripVerticalIcon } from '../components/icons/GripVerticalIcon';
 
 
 interface TabButtonProps {
@@ -186,7 +187,7 @@ async function handleRequest(request) {
                         <div>
                             <label htmlFor="wordpressUrl" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">WordPress Site URL</label>
                             <input type="url" id="wordpressUrl" name="wordpressUrl" value={settings.wordpressUrl} onChange={handleChange} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono" placeholder="https://your-blog.com" />
-                            <p className="text-xs text-slate-500 mt-1">Your WordPress site's REST API must be publicly accessible.</p>
+                            <p className="text-xs text-slate-500 mt-1">Your WordPress site's REST API must be publicly accessible. Leave blank to show demo posts.</p>
                         </div>
                     )}
                 </div>
@@ -300,11 +301,18 @@ async function handleRequest(request) {
 
 const NumbersPanel: React.FC = () => {
     const [publicNumbers, setPublicNumbers] = useState<PhoneNumber[]>([]);
+    const [initialPublicNumbersOrder, setInitialPublicNumbersOrder] = useState<string[]>([]);
     const [availableNumbers, setAvailableNumbers] = useState<PhoneNumber[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [editingSid, setEditingSid] = useState<string | null>(null);
     const [editFormData, setEditFormData] = useState<{ country: string; enabled: boolean; countryCode: string }>({ country: '', enabled: true, countryCode: '' });
+
+    // For drag and drop
+    const draggedItem = useRef<PhoneNumber | null>(null);
+    const dragOverItem = useRef<PhoneNumber | null>(null);
+
+    const isOrderChanged = JSON.stringify(publicNumbers.map(n => n.id)) !== JSON.stringify(initialPublicNumbersOrder);
 
     const fetchNumbers = async () => {
         setIsLoading(true);
@@ -312,7 +320,8 @@ const NumbersPanel: React.FC = () => {
         try {
             const currentSettings = getSettings();
             const savedPublicNumbers = currentSettings.publicNumbers || [];
-            setPublicNumbers(savedPublicNumbers.sort((a,b) => a.number.localeCompare(b.number)));
+            setPublicNumbers(savedPublicNumbers);
+            setInitialPublicNumbersOrder(savedPublicNumbers.map(n => n.id));
             
             const [twilioResult, signalwireResult] = await Promise.allSettled([
                 getOwnedNumbers(),
@@ -415,6 +424,36 @@ const NumbersPanel: React.FC = () => {
             fetchNumbers();
         }
     };
+
+    const handleSaveOrder = () => {
+        const currentSettings = getSettings();
+        saveSettings({ ...currentSettings, publicNumbers });
+        setInitialPublicNumbersOrder(publicNumbers.map(n => n.id)); // Reset initial order to current
+    };
+
+    const handleDragSort = () => {
+        if (!draggedItem.current || !dragOverItem.current) return;
+
+        // Create a copy of the numbers array
+        let items = [...publicNumbers];
+
+        // Find the indexes of the dragged and drag-over items
+        const draggedItemIndex = items.findIndex(item => item.id === draggedItem.current!.id);
+        const dragOverItemIndex = items.findIndex(item => item.id === dragOverItem.current!.id);
+
+        // Remove the dragged item from its original position
+        const [reorderedItem] = items.splice(draggedItemIndex, 1);
+        
+        // Insert the dragged item at the new position
+        items.splice(dragOverItemIndex, 0, reorderedItem);
+
+        // Update the state
+        setPublicNumbers(items);
+
+        // Reset the refs
+        draggedItem.current = null;
+        dragOverItem.current = null;
+    };
     
     const providerBadgeClass = (provider: PhoneNumber['provider']) => {
         switch (provider) {
@@ -465,21 +504,40 @@ const NumbersPanel: React.FC = () => {
                      <div>
                         <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
                            <h3 className="text-md font-semibold text-slate-700 dark:text-slate-300">Your Public Numbers ({publicNumbers.length})</h3>
+                           <div className="flex items-center gap-2">
+                            {isOrderChanged && (
+                                <button
+                                    onClick={handleSaveOrder}
+                                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-md transition-colors"
+                                >
+                                    <SaveIcon className="w-4 h-4" />
+                                    Save Order
+                                </button>
+                            )}
                            <button
                                onClick={handleAddDemoNumbers}
-                               className="flex items-center gap-2 px-3 py-1.5 text-sm bg-teal-100 dark:bg-teal-900/50 hover:bg-teal-200 dark:hover:bg-teal-900 text-teal-600 dark:text-teal-300 font-semibold rounded-md transition-colors"
+                               className="flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-md transition-colors"
                            >
                                <PlusIcon className="w-4 h-4" />
                                Add Demo Numbers
                            </button>
+                           </div>
                         </div>
 
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                            These numbers are visible on your website. Edit them to change their display name or disable them temporarily. Demo numbers are for display purposes only and will not receive real messages.
+                            These numbers are visible on your website. Drag and drop to reorder them.
                         </p>
                         <div className="space-y-3">
-                            {publicNumbers.length > 0 ? publicNumbers.map(num => (
-                                <div key={num.id} className="p-3 bg-slate-100 dark:bg-slate-700/50 rounded-md transition-all duration-300">
+                            {publicNumbers.length > 0 ? publicNumbers.map((num) => (
+                                <div 
+                                    key={num.id} 
+                                    className={`p-3 bg-slate-100 dark:bg-slate-700/50 rounded-md transition-all duration-300 ${draggedItem.current?.id === num.id ? 'opacity-50' : ''}`}
+                                    draggable
+                                    onDragStart={() => (draggedItem.current = num)}
+                                    onDragEnter={() => (dragOverItem.current = num)}
+                                    onDragEnd={handleDragSort}
+                                    onDragOver={(e) => e.preventDefault()}
+                                >
                                     {editingSid === num.id ? (
                                         <div className="space-y-4">
                                             {/* Edit Form */}
@@ -505,19 +563,24 @@ const NumbersPanel: React.FC = () => {
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                                            {/* Display View */}
-                                            <div className="flex-grow">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${num.enabled ? 'bg-green-500' : 'bg-red-500'}`} title={num.enabled ? 'Enabled' : 'Disabled'}></span>
-                                                    <p className="font-mono font-semibold text-slate-800 dark:text-slate-200">{num.number}</p>
-                                                    <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded-full ${providerBadgeClass(num.provider)}`}>{num.provider}</span>
-                                                </div>
-                                                <p className="text-sm text-slate-500 dark:text-slate-400 ml-5">{num.country} {num.countryCode ? `(${num.countryCode.toUpperCase()})` : ''}</p>
+                                        <div className="flex items-center">
+                                            <div className="cursor-grab text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 pr-3">
+                                                <GripVerticalIcon className="w-5 h-5" />
                                             </div>
-                                            <div className="mt-2 sm:mt-0 sm:ml-4 flex-shrink-0 flex items-center gap-2">
-                                                <button onClick={() => handleEdit(num)} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-md"><PencilIcon className="w-4 h-4" /> Edit</button>
-                                                <button onClick={() => handleRemoveNumber(num.id)} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold rounded-md"><TrashIcon className="w-4 h-4" /> Remove</button>
+                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full">
+                                                {/* Display View */}
+                                                <div className="flex-grow">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${num.enabled ? 'bg-green-500' : 'bg-red-500'}`} title={num.enabled ? 'Enabled' : 'Disabled'}></span>
+                                                        <p className="font-mono font-semibold text-slate-800 dark:text-slate-200">{num.number}</p>
+                                                        <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded-full ${providerBadgeClass(num.provider)}`}>{num.provider}</span>
+                                                    </div>
+                                                    <p className="text-sm text-slate-500 dark:text-slate-400 ml-5">{num.country} {num.countryCode ? `(${num.countryCode.toUpperCase()})` : ''}</p>
+                                                </div>
+                                                <div className="mt-2 sm:mt-0 sm:ml-4 flex-shrink-0 flex items-center gap-2 self-end sm:self-center">
+                                                    <button onClick={() => handleEdit(num)} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-md"><PencilIcon className="w-4 h-4" /> Edit</button>
+                                                    <button onClick={() => handleRemoveNumber(num.id)} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold rounded-md"><TrashIcon className="w-4 h-4" /> Remove</button>
+                                                </div>
                                             </div>
                                         </div>
                                     )}
