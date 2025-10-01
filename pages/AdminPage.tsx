@@ -170,6 +170,29 @@ async function handleRequest(request) {
             </div>
 
             <div>
+                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-2 mb-4">Blog Integration (WordPress)</h2>
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between pt-2">
+                        <div className="flex flex-col">
+                            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Enable Blog Section on Homepage</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">Show the latest posts from your blog.</span>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="enableBlogSection" checked={settings.enableBlogSection} onChange={handleChange} className="sr-only peer" />
+                            <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-500 peer-checked:bg-teal-600"></div>
+                        </label>
+                    </div>
+                    {settings.enableBlogSection && (
+                        <div>
+                            <label htmlFor="wordpressUrl" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">WordPress Site URL</label>
+                            <input type="url" id="wordpressUrl" name="wordpressUrl" value={settings.wordpressUrl} onChange={handleChange} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono" placeholder="https://your-blog.com" />
+                            <p className="text-xs text-slate-500 mt-1">Your WordPress site's REST API must be publicly accessible.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div>
                  <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-2 mb-4">Twilio Configuration</h2>
                  <div className="p-4 mb-4 text-sm rounded-lg bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800/50" role="alert">
                     <span className="font-bold">Security Warning:</span> Storing API keys on the client-side is highly insecure and can lead to account takeover. This is for demonstration purposes only. In a production environment, all API calls must be made from a secure backend server.

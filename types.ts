@@ -30,6 +30,15 @@ export interface FooterLink {
     url: string;
 }
 
+export interface BlogPost {
+  id: number;
+  title: string;
+  link: string;
+  excerpt: string;
+  date: Date;
+  featuredImageUrl?: string;
+}
+
 export interface Settings {
     title: string;
     description: string;
@@ -54,5 +63,7 @@ export interface Settings {
     signalwireApiToken: string;
     adminUsername: string;
     adminPassword: string;
+    enableBlogSection: boolean;
+    wordpressUrl: string;
     publicNumbers: PhoneNumber[];
 }

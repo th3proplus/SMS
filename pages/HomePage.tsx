@@ -1,28 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import type { PhoneNumber, Settings } from '../types';
+import type { PhoneNumber, Settings, BlogPost } from '../types';
 import { getAvailableNumbers } from '../services/smsService';
+import { getLatestPosts, demoPosts } from '../services/wordpressService';
 import { getSettings } from '../services/settingsService';
 import { updateMetadata } from '../services/seoService';
 import Header from '../components/Header';
 import PhoneNumberCard from '../components/PhoneNumberCard';
 import Footer from '../components/Footer';
 import AdsenseAd from '../components/AdsenseAd';
+import BlogSection from '../components/BlogSection';
 
 const HomePage: React.FC = () => {
   const [settings, setSettings] = useState<Settings>(getSettings());
   
-  // Initialize with cached numbers for an instant "app-like" loading experience.
-  // The useEffect below will still fire to fetch the latest data.
   const initialNumbers = (settings.publicNumbers || []).filter(n => n.enabled);
   const [numbers, setNumbers] = useState<PhoneNumber[]>(
     initialNumbers.sort((a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime())
   );
-  
   const [error, setError] = useState<string | null>(null);
-  
-  // Only show the main "Loading..." indicator if there are no cached numbers to display.
-  // This prevents a flash of the loading text on subsequent visits.
   const [isLoading, setIsLoading] = useState(initialNumbers.length === 0);
+
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [isBlogLoading, setIsBlogLoading] = useState(false);
+  const [blogError, setBlogError] = useState<string | null>(null);
   
   useEffect(() => {
     updateMetadata({
@@ -35,9 +35,7 @@ const HomePage: React.FC = () => {
   useEffect(() => {
     const fetchNumbers = async () => {
       try {
-        // Only show numbers that are explicitly enabled
         const numbersData = (await getAvailableNumbers()).filter(n => n.enabled);
-        // Sort by most recently active
         setNumbers(numbersData.sort((a,b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime()));
         setError(null);
       } catch (err: any) {
@@ -47,12 +45,50 @@ const HomePage: React.FC = () => {
         setIsLoading(false);
       }
     };
+
+    const fetchBlogPosts = async () => {
+        const currentSettings = getSettings();
+        if (!currentSettings.enableBlogSection) {
+            setPosts([]);
+            setIsBlogLoading(false);
+            setBlogError(null);
+            return;
+        }
+
+        setIsBlogLoading(true);
+        setBlogError(null);
+
+        // If URL is not set, just use demo posts immediately.
+        if (!currentSettings.wordpressUrl.trim()) {
+            setPosts(demoPosts);
+            setIsBlogLoading(false);
+            return;
+        }
+        
+        // If URL is set, try to fetch.
+        try {
+            const postsData = await getLatestPosts(3);
+            setPosts(postsData);
+        } catch (err: any) {
+            console.error("Blog fetch error:", err);
+            setPosts(demoPosts); // Fallback to demo posts
+            setBlogError('Could not connect to the blog. Showing demo articles instead.');
+        } finally {
+            setIsBlogLoading(false);
+        }
+    };
     
-    fetchNumbers(); // Initial fetch
-    const numberInterval = setInterval(fetchNumbers, 5000); // Poll for new activity
+    const initialFetch = () => {
+        fetchNumbers();
+        fetchBlogPosts();
+    };
+
+    initialFetch();
+    const numberInterval = setInterval(fetchNumbers, 5000);
     
     const handleSettingsChange = () => {
         setSettings(getSettings());
+        fetchBlogPosts(); // Refetch blog posts if settings change
     }
     window.addEventListener('settingsChanged', handleSettingsChange);
 
@@ -139,6 +175,9 @@ const HomePage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {renderNumberList()}
         </div>
+        {settings.enableBlogSection && (
+            <BlogSection posts={posts} isLoading={isBlogLoading} error={blogError} />
+        )}
       </main>
       <Footer text={settings.footerText} links={settings.footerLinks} />
     </div>

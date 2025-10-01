@@ -30,6 +30,8 @@ const defaultSettings: Settings = {
     signalwireApiToken: '',
     adminUsername: 'admin',
     adminPassword: 'password',
+    enableBlogSection: false,
+    wordpressUrl: '',
     publicNumbers: [],
 };
 
