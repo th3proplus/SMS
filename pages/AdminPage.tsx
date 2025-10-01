@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { logout, updateCredentials } from '../services/authService';
 import { getSettings, saveSettings, applyTheme } from '../services/settingsService';
 import { getOwnedNumbers, getWebhookLogs, demoNumbers } from '../services/twilioService';
@@ -314,7 +314,7 @@ const NumbersPanel: React.FC = () => {
 
     const isOrderChanged = JSON.stringify(publicNumbers.map(n => n.id)) !== JSON.stringify(initialPublicNumbersOrder);
 
-    const fetchNumbers = async () => {
+    const fetchNumbers = useCallback(async () => {
         setIsLoading(true);
         setError(null);
         try {
@@ -353,11 +353,15 @@ const NumbersPanel: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
     
     useEffect(() => {
         fetchNumbers();
-    }, []);
+        window.addEventListener('settingsChanged', fetchNumbers);
+        return () => {
+            window.removeEventListener('settingsChanged', fetchNumbers);
+        };
+    }, [fetchNumbers]);
 
     const handleAddDemoNumbers = () => {
         const currentSettings = getSettings();
@@ -624,7 +628,7 @@ const WebhookLogsPanel: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchLogs = async () => {
+    const fetchLogs = useCallback(async () => {
         setIsLoading(true);
         setError(null);
         try {
@@ -637,11 +641,15 @@ const WebhookLogsPanel: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchLogs();
-    }, []);
+        window.addEventListener('settingsChanged', fetchLogs);
+        return () => {
+            window.removeEventListener('settingsChanged', fetchLogs);
+        };
+    }, [fetchLogs]);
 
     const getLogLevelClass = (level: WebhookLog['logLevel']) => {
         switch (level) {
