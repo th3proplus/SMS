@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { logout, updateCredentials } from '../services/authService';
 import { getSettings, saveSettings, applyTheme } from '../services/settingsService';
 import { getOwnedNumbers, getWebhookLogs, demoNumbers } from '../services/twilioService';
+import { getOwnedNumbers as getSignalWireNumbers } from '../services/signalwireService';
 import { navigate } from '../services/navigationService';
 import type { Settings, PhoneNumber, FooterLink, WebhookLog } from '../types';
 import { AdminIcon } from '../components/icons/AdminIcon';
@@ -74,15 +75,15 @@ async function handleRequest(request) {
   
   // The request to the worker will be like:
   // https://my-proxy.workers.dev/https://api.twilio.com/2010-04-01/...
-  // We need to extract the target Twilio URL from the path.
+  // We need to extract the target URL from the path.
   let apiUrl = url.pathname.substring(1); // Remove leading '/'
   if (url.search) {
       apiUrl += url.search;
   }
   
-  // Security: Only allow requests to the Twilio API
-  if (!apiUrl.startsWith('https://api.twilio.com/')) {
-    return new Response('This proxy only forwards requests to api.twilio.com', { status: 403 });
+  // Security: Only allow requests to the Twilio or SignalWire API
+  if (!apiUrl.startsWith('https://api.twilio.com/') && !apiUrl.includes('.signalwire.com/')) {
+    return new Response('This proxy only forwards requests to approved APIs.', { status: 403 });
   }
 
   // Create a new request to the target API
@@ -136,6 +137,9 @@ async function handleRequest(request) {
         applyTheme(settings.theme);
         setTimeout(() => setIsSaving(false), 1000); 
     };
+    
+    const isTwilioConnected = settings.twilioAccountSid.startsWith('AC') && settings.twilioAuthToken;
+    const isSignalWireConnected = settings.signalwireSpaceUrl && settings.signalwireProjectId && settings.signalwireApiToken;
 
     return (
         <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md space-y-8">
@@ -168,7 +172,7 @@ async function handleRequest(request) {
             <div>
                  <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-2 mb-4">Twilio Configuration</h2>
                  <div className="p-4 mb-4 text-sm rounded-lg bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800/50" role="alert">
-                    <span className="font-bold">Security Warning:</span> Storing API keys on the client-side is highly insecure and can lead to account takeover. This is for demonstration purposes only. In a production environment, all Twilio API calls must be made from a secure backend server.
+                    <span className="font-bold">Security Warning:</span> Storing API keys on the client-side is highly insecure and can lead to account takeover. This is for demonstration purposes only. In a production environment, all API calls must be made from a secure backend server.
                 </div>
                  <div className="space-y-4">
                     <div>
@@ -181,8 +185,32 @@ async function handleRequest(request) {
                     </div>
                      <p className="text-sm text-slate-600 dark:text-slate-300">
                         <strong>Status:</strong> 
-                        <span className={`ml-2 font-bold ${settings.twilioAccountSid.startsWith('AC') && settings.twilioAuthToken ? 'text-green-500' : 'text-red-500'}`}>
-                            {settings.twilioAccountSid.startsWith('AC') && settings.twilioAuthToken ? 'Connected' : 'Disconnected'}
+                        <span className={`ml-2 font-bold ${isTwilioConnected ? 'text-green-500' : 'text-red-500'}`}>
+                            {isTwilioConnected ? 'Connected' : 'Disconnected'}
+                        </span>
+                    </p>
+                 </div>
+            </div>
+
+            <div>
+                 <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-2 mb-4">SignalWire Configuration</h2>
+                 <div className="space-y-4">
+                    <div>
+                        <label htmlFor="signalwireSpaceUrl" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Space URL</label>
+                        <input type="text" id="signalwireSpaceUrl" name="signalwireSpaceUrl" value={settings.signalwireSpaceUrl} onChange={handleChange} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono" placeholder="your-space.signalwire.com" />
+                    </div>
+                    <div>
+                        <label htmlFor="signalwireProjectId" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Project ID</label>
+                        <input type="text" id="signalwireProjectId" name="signalwireProjectId" value={settings.signalwireProjectId} onChange={handleChange} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+                    </div>
+                    <div>
+                        <label htmlFor="signalwireApiToken" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">API Token</label>
+                        <input type="password" id="signalwireApiToken" name="signalwireApiToken" value={settings.signalwireApiToken} onChange={handleChange} placeholder="Enter token to change or set" className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono" />
+                    </div>
+                     <p className="text-sm text-slate-600 dark:text-slate-300">
+                        <strong>Status:</strong> 
+                        <span className={`ml-2 font-bold ${isSignalWireConnected ? 'text-green-500' : 'text-red-500'}`}>
+                            {isSignalWireConnected ? 'Connected' : 'Disconnected'}
                         </span>
                     </p>
                  </div>
@@ -207,7 +235,7 @@ async function handleRequest(request) {
                             <p className="mb-3">You can deploy a simple and secure proxy for free using Cloudflare Workers. This will route your API requests reliably without hitting public limits.</p>
                             <ol className="list-decimal list-inside space-y-2 mb-4">
                                 <li><a href="https://dash.cloudflare.com/?to=/:account/workers" target="_blank" rel="noopener noreferrer" className="font-semibold text-teal-500 hover:underline">Sign up or log in to Cloudflare</a> and go to the Workers section.</li>
-                                <li>Click "Create a Service", give it a name (e.g., `twilio-proxy`), and choose the "HTTP handler" starter.</li>
+                                <li>Click "Create a Service", give it a name (e.g., `sms-proxy`), and choose the "HTTP handler" starter.</li>
                                 <li>Click "Create service", then "Quick edit".</li>
                                 <li>Delete all the boilerplate code and paste the code below.</li>
                                 <li>Click "Save and Deploy". Your proxy URL will be shown at the top. Copy it and paste it into the field above.</li>
@@ -249,7 +277,7 @@ async function handleRequest(request) {
 
 const NumbersPanel: React.FC = () => {
     const [publicNumbers, setPublicNumbers] = useState<PhoneNumber[]>([]);
-    const [availableTwilioNumbers, setAvailableTwilioNumbers] = useState<PhoneNumber[]>([]);
+    const [availableNumbers, setAvailableNumbers] = useState<PhoneNumber[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [editingSid, setEditingSid] = useState<string | null>(null);
@@ -262,12 +290,31 @@ const NumbersPanel: React.FC = () => {
             const currentSettings = getSettings();
             const savedPublicNumbers = currentSettings.publicNumbers || [];
             setPublicNumbers(savedPublicNumbers.sort((a,b) => a.number.localeCompare(b.number)));
-
-            const allTwilioNumbers = await getOwnedNumbers();
             
-            const publicSids = new Set(savedPublicNumbers.map(n => n.id));
-            const available = allTwilioNumbers.filter(n => !publicSids.has(n.id));
-            setAvailableTwilioNumbers(available.sort((a,b) => a.number.localeCompare(b.number)));
+            const [twilioResult, signalwireResult] = await Promise.allSettled([
+                getOwnedNumbers(),
+                getSignalWireNumbers(),
+            ]);
+
+            let allOwnedNumbers: PhoneNumber[] = [];
+            if (twilioResult.status === 'fulfilled') {
+                allOwnedNumbers.push(...twilioResult.value);
+            } else {
+                 console.error("Twilio fetch failed:", twilioResult.reason);
+                 setError(prev => (prev ? prev + ' | ' : '') + `Twilio: ${twilioResult.reason?.message || 'Failed'}`);
+            }
+
+            if (signalwireResult.status === 'fulfilled') {
+                allOwnedNumbers.push(...signalwireResult.value);
+            } else {
+                 console.error("SignalWire fetch failed:", signalwireResult.reason);
+                 setError(prev => (prev ? prev + ' | ' : '') + `SignalWire: ${signalwireResult.reason?.message || 'Failed'}`);
+            }
+            
+            const publicIds = new Set(savedPublicNumbers.map(n => n.id));
+            const available = allOwnedNumbers.filter(n => !publicIds.has(n.id));
+            setAvailableNumbers(available.sort((a,b) => a.number.localeCompare(b.number)));
+
         } catch (err: any) {
             console.error("Failed to fetch numbers", err);
             setError(err.message || 'An unknown error occurred.');
@@ -282,9 +329,9 @@ const NumbersPanel: React.FC = () => {
 
     const handleAddDemoNumbers = () => {
         const currentSettings = getSettings();
-        const existingPublicSids = new Set((currentSettings.publicNumbers || []).map(n => n.id));
+        const existingPublicIds = new Set((currentSettings.publicNumbers || []).map(n => n.id));
         
-        const newDemoNumbersToAdd = demoNumbers.filter(demoNum => !existingPublicSids.has(demoNum.id));
+        const newDemoNumbersToAdd = demoNumbers.filter(demoNum => !existingPublicIds.has(demoNum.id));
 
         if (newDemoNumbersToAdd.length === 0) {
             alert('All demo numbers have already been added.');
@@ -318,10 +365,10 @@ const NumbersPanel: React.FC = () => {
         }));
     };
     
-    const handleSave = (sid: string) => {
+    const handleSave = (id: string) => {
         const currentSettings = getSettings();
         const updatedPublicNumbers = currentSettings.publicNumbers.map(num => 
-            num.id === sid 
+            num.id === id 
                 ? { ...num, ...editFormData, countryCode: editFormData.countryCode.toUpperCase() } 
                 : num
         );
@@ -337,18 +384,28 @@ const NumbersPanel: React.FC = () => {
         fetchNumbers();
     };
 
-    const handleRemoveNumber = (sidToRemove: string) => {
+    const handleRemoveNumber = (idToRemove: string) => {
         if (window.confirm('Are you sure you want to remove this number from the public site? It can be re-added later.')) {
             const currentSettings = getSettings();
-            const updatedPublicNumbers = currentSettings.publicNumbers.filter(n => n.id !== sidToRemove);
+            const updatedPublicNumbers = currentSettings.publicNumbers.filter(n => n.id !== idToRemove);
             saveSettings({ ...currentSettings, publicNumbers: updatedPublicNumbers });
             fetchNumbers();
         }
     };
+    
+    const providerBadgeClass = (provider: PhoneNumber['provider']) => {
+        switch (provider) {
+            case 'twilio': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300';
+            case 'signalwire': return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300';
+            case 'demo': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300';
+            default: return 'bg-slate-200 text-slate-800 dark:bg-slate-600 dark:text-slate-300';
+        }
+    }
+
 
     const renderErrorState = () => (
          <div className="text-center p-4">
-            <p className="font-semibold text-red-500 mb-2">Could not load numbers from Twilio</p>
+            <p className="font-semibold text-red-500 mb-2">Could not load all numbers</p>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{error}</p>
             {error?.includes('proxy') && (
                 <div className="mt-4 p-4 bg-blue-100 dark:bg-blue-900/30 rounded-md text-left">
@@ -378,8 +435,9 @@ const NumbersPanel: React.FC = () => {
                 </button>
             </div>
             
-             {isLoading ? <p className="text-slate-500">Loading numbers...</p> : error ? renderErrorState() : (
+             {isLoading ? <p className="text-slate-500">Loading numbers...</p> : error && !availableNumbers.length && !publicNumbers.length ? renderErrorState() : (
                  <div className="space-y-8">
+                      {error && <div className="p-3 text-sm rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800/50">{error}</div>}
                      {/* Your Public Numbers */}
                      <div>
                         <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
@@ -427,9 +485,10 @@ const NumbersPanel: React.FC = () => {
                                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
                                             {/* Display View */}
                                             <div className="flex-grow">
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 flex-wrap">
                                                     <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${num.enabled ? 'bg-green-500' : 'bg-red-500'}`} title={num.enabled ? 'Enabled' : 'Disabled'}></span>
                                                     <p className="font-mono font-semibold text-slate-800 dark:text-slate-200">{num.number}</p>
+                                                    <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded-full ${providerBadgeClass(num.provider)}`}>{num.provider}</span>
                                                 </div>
                                                 <p className="text-sm text-slate-500 dark:text-slate-400 ml-5">{num.country} {num.countryCode ? `(${num.countryCode.toUpperCase()})` : ''}</p>
                                             </div>
@@ -446,22 +505,25 @@ const NumbersPanel: React.FC = () => {
                      
                      {/* Available from Twilio */}
                      <div>
-                        <h3 className="text-md font-semibold text-slate-700 dark:text-slate-300 mb-2">Available from Twilio ({availableTwilioNumbers.length})</h3>
+                        <h3 className="text-md font-semibold text-slate-700 dark:text-slate-300 mb-2">Available from Your Accounts ({availableNumbers.length})</h3>
                          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                           These numbers were found in your Twilio account but are not yet public on the site.
+                           These numbers were found in your Twilio/SignalWire accounts but are not yet public on the site.
                         </p>
                         <div className="space-y-3">
-                             {availableTwilioNumbers.length > 0 ? availableTwilioNumbers.map(num => (
+                             {availableNumbers.length > 0 ? availableNumbers.map(num => (
                                 <div key={num.id} className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-md flex flex-col sm:flex-row justify-between items-start sm:items-center">
                                     <div className="flex-grow">
-                                        <p className="font-mono font-semibold text-slate-800 dark:text-slate-200">{num.number}</p>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <p className="font-mono font-semibold text-slate-800 dark:text-slate-200">{num.number}</p>
+                                            <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded-full ${providerBadgeClass(num.provider)}`}>{num.provider}</span>
+                                        </div>
                                         <p className="text-sm text-slate-500 dark:text-slate-400">{num.country} {num.countryCode ? `(${num.countryCode.toUpperCase()})` : ''}</p>
                                     </div>
                                     <div className="mt-2 sm:mt-0 sm:ml-4 flex-shrink-0">
                                         <button onClick={() => handleAddNumber(num)} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-md"><PlusIcon className="w-4 h-4" /> Add to Site</button>
                                     </div>
                                 </div>
-                             )) : <p className="text-slate-500 dark:text-slate-400 text-center py-4 text-sm">No new numbers available in your Twilio account.</p>}
+                             )) : <p className="text-slate-500 dark:text-slate-400 text-center py-4 text-sm">No new numbers available in your connected accounts.</p>}
                         </div>
                      </div>
                  </div>
@@ -518,7 +580,7 @@ const WebhookLogsPanel: React.FC = () => {
                 </button>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                Shows the latest errors and warnings from your Twilio account, such as webhook failures.
+                Shows the latest errors and warnings from your Twilio account, such as webhook failures. SignalWire logs are not currently supported.
             </p>
             {isLoading ? (
                 <p className="text-slate-500 text-center py-4">Loading logs...</p>

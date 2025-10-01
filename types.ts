@@ -7,6 +7,7 @@ export interface PhoneNumber {
   createdAt: Date;
   webhookUrl: string;
   enabled: boolean;
+  provider: 'twilio' | 'signalwire' | 'demo';
 }
 
 export interface SMSMessage {
@@ -48,6 +49,9 @@ export interface Settings {
     proxyUrl: string;
     twilioAccountSid: string;
     twilioAuthToken: string;
+    signalwireSpaceUrl: string;
+    signalwireProjectId: string;
+    signalwireApiToken: string;
     adminUsername: string;
     adminPassword: string;
     publicNumbers: PhoneNumber[];

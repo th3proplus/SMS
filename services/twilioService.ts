@@ -12,6 +12,7 @@ export const demoNumbers: PhoneNumber[] = [
       createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30), // 30 days ago
       webhookUrl: '',
       enabled: true,
+      provider: 'demo',
     },
     {
       id: 'demo-gb-1',
@@ -22,6 +23,7 @@ export const demoNumbers: PhoneNumber[] = [
       createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 60), // 60 days ago
       webhookUrl: '',
       enabled: true,
+      provider: 'demo',
     },
     {
       id: 'demo-fr-1',
@@ -32,10 +34,22 @@ export const demoNumbers: PhoneNumber[] = [
       createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 90), // 90 days ago
       webhookUrl: '',
       enabled: false,
+      provider: 'demo',
+    },
+    {
+      id: 'demo-sw-1',
+      number: '+1 555 867 5309',
+      country: 'United States (SignalWire Demo)',
+      countryCode: 'US',
+      lastMessageAt: new Date(Date.now() - 1000 * 60 * 5), // 5 minutes ago
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10), // 10 days ago
+      webhookUrl: '',
+      enabled: true,
+      provider: 'demo',
     },
   ];
   
-const demoMessages: { [key: string]: SMSMessage[] } = {
+export const demoMessages: { [key: string]: SMSMessage[] } = {
     '+1 201 555 0123': [
         { id: 'msg-demo-1', from: 'Verify', body: 'Your verification code is 123456.', receivedAt: new Date(Date.now() - 1000 * 60 * 2) },
         { id: 'msg-demo-2', from: 'Alert', body: 'Your package will be delivered today.', receivedAt: new Date(Date.now() - 1000 * 60 * 60 * 1) },
@@ -48,6 +62,9 @@ const demoMessages: { [key: string]: SMSMessage[] } = {
     '+33 6 55 55 01 23': [
         { id: 'msg-demo-6', from: 'LaPoste', body: 'Votre colis est en cours de livraison. Suivez-le ici: https://example.com', receivedAt: new Date(Date.now() - 1000 * 60 * 60 * 3) },
         { id: 'msg-demo-7', from: 'Doctolib', body: 'Votre rendez-vous est confirmé pour demain à 10h00.', receivedAt: new Date(Date.now() - 1000 * 60 * 60 * 22) },
+    ],
+    '+1 555 867 5309': [
+        { id: 'msg-demo-8', from: 'SignalWire', body: 'Welcome to SignalWire! Your demo message is here.', receivedAt: new Date(Date.now() - 1000 * 60 * 5) },
     ],
 };
 
@@ -191,6 +208,7 @@ const mapTwilioNumberToPhoneNumber = (twilioNumber: any): PhoneNumber => {
         createdAt: new Date(twilioNumber.date_created),
         webhookUrl: twilioNumber.sms_url || '',
         enabled: true, // This is managed in the settings, this is just a default for newly fetched numbers.
+        provider: 'twilio',
     };
 };
 
@@ -240,8 +258,8 @@ export const getTwilioConfig = (): Promise<{
 
 export const getOwnedNumbers = async (): Promise<PhoneNumber[]> => {
     if (!areTwilioCredentialsConfigured()) {
-        console.warn('Twilio credentials not configured. Attempting to load numbers from cache.');
-        return getCachedNumbers();
+        console.warn('Twilio credentials not configured. Skipping fetch.');
+        return [];
     }
     
     try {
@@ -268,16 +286,15 @@ export const getOwnedNumbers = async (): Promise<PhoneNumber[]> => {
             })
         );
         
-        cacheNumbers(numbersWithActivity); // Cache the fresh data on successful fetch
+        // Cache both Twilio and any existing cached SignalWire numbers
+        const existingCache = getCachedNumbers();
+        const signalwireCached = existingCache.filter(n => n.provider === 'signalwire');
+        cacheNumbers([...numbersWithActivity, ...signalwireCached]);
         return numbersWithActivity;
 
     } catch (error) {
-        console.error("Failed to fetch owned numbers from Twilio, falling back to cache:", error);
-        const cachedNumbers = getCachedNumbers();
-        if (cachedNumbers.length > 0) {
-            return cachedNumbers; // Return cached data on failure
-        }
-        // Only throw an error if the API fails AND the cache is empty
+        console.error("Failed to fetch owned numbers from Twilio:", error);
+        // Only throw an error if the API fails
         throw error; 
     }
 };
