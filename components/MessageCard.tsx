@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import type { SMSMessage } from '../types';
-import { CopyIcon } from './icons/CopyIcon';
-import { timeAgo } from '../utils/time';
+// FIX: Add .ts extension for module resolution
+import type { SMSMessage } from '../types.ts';
+import { CopyIcon } from './icons/CopyIcon.tsx';
+import { timeAgo } from '../utils/time.ts';
 
 interface MessageCardProps {
   message: SMSMessage;

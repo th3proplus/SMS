@@ -1,6 +1,7 @@
 import React from 'react';
-import type { SMSMessage } from '../types';
-import MessageCard from './MessageCard';
+// FIX: Add .ts extension for module resolution
+import type { SMSMessage } from '../types.ts';
+import MessageCard from './MessageCard.tsx';
 
 interface MessageListProps {
   messages: SMSMessage[];

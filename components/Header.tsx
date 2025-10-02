@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import type { FooterLink } from '../types';
-import { AdminIcon } from './icons/AdminIcon';
-import { MenuIcon } from './icons/MenuIcon';
-import { XIcon } from './icons/XIcon';
+// FIX: Add .ts extension for module resolution
+import type { FooterLink } from '../types.ts';
+import { AdminIcon } from './icons/AdminIcon.tsx';
+import { MenuIcon } from './icons/MenuIcon.tsx';
+import { XIcon } from './icons/XIcon.tsx';
 
 interface HeaderProps {
     title: string;

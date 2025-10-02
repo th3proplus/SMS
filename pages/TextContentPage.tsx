@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { getSettings } from '../services/settingsService';
-import { updateMetadata } from '../services/seoService';
-import type { Settings } from '../types';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import { ChevronLeftIcon } from '../components/icons/ChevronLeftIcon';
-import { parseMarkdown } from '../utils/markdown';
+// FIX: Add .ts extension for module resolution
+import { getSettings } from '../services/settingsService.ts';
+import { updateMetadata } from '../services/seoService.ts';
+// FIX: Add .ts extension for module resolution
+import type { Settings } from '../types.ts';
+import Header from '../components/Header.tsx';
+import Footer from '../components/Footer.tsx';
+import { ChevronLeftIcon } from '../components/icons/ChevronLeftIcon.tsx';
+import { parseMarkdown } from '../utils/markdown.ts';
 
 interface TextContentPageProps {
   title: string;

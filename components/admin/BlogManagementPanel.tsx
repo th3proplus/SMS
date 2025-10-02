@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { getSettings, saveSettings } from '../../services/settingsService';
-import type { BlogPost, Settings } from '../../types';
-import BlogPostEditor from './BlogPostEditor';
-import { PlusIcon } from '../icons/PlusIcon';
-import { PencilIcon } from '../icons/PencilIcon';
-import { TrashIcon } from '../icons/TrashIcon';
+// FIX: Add .ts extension for module resolution
+import { getSettings, saveSettings } from '../../services/settingsService.ts';
+// FIX: Add .ts extension for module resolution
+import type { BlogPost, Settings } from '../../types.ts';
+// FIX: Add .tsx extension for module resolution
+import BlogPostEditor from './BlogPostEditor.tsx';
+import { PlusIcon } from '../icons/PlusIcon.tsx';
+import { PencilIcon } from '../icons/PencilIcon.tsx';
+import { TrashIcon } from '../icons/TrashIcon.tsx';
 
 const BlogManagementPanel: React.FC = () => {
     const [settings, setSettings] = useState<Settings>(getSettings());

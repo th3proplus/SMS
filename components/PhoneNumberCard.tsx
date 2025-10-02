@@ -1,8 +1,9 @@
 import React from 'react';
-import type { PhoneNumber } from '../types';
-import { timeAgo } from '../utils/time';
-import { ClockIcon } from './icons/ClockIcon';
-import { ArrowRightIcon } from './icons/ArrowRightIcon';
+// FIX: Add .ts extension for module resolution
+import type { PhoneNumber } from '../types.ts';
+import { timeAgo } from '../utils/time.ts';
+import { ClockIcon } from './icons/ClockIcon.tsx';
+import { ArrowRightIcon } from './icons/ArrowRightIcon.tsx';
 
 interface PhoneNumberCardProps {
   number: PhoneNumber;

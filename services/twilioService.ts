@@ -1,5 +1,7 @@
-import type { PhoneNumber, SMSMessage, Settings, WebhookLog } from '../types';
-import { getSettings } from './settingsService';
+// FIX: Add .ts extension for module resolution
+import type { PhoneNumber, SMSMessage, Settings, WebhookLog } from '../types.ts';
+// FIX: Add .ts extension for module resolution
+import { getSettings } from './settingsService.ts';
 
 // --- DEMO DATA ---
 export const demoNumbers: PhoneNumber[] = [

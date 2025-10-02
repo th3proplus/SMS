@@ -1,5 +1,6 @@
 import React from 'react';
-import type { FooterLink } from '../types';
+// FIX: Add .ts extension for module resolution
+import type { FooterLink } from '../types.ts';
 
 interface FooterProps {
   text: string;

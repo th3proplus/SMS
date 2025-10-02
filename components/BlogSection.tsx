@@ -1,5 +1,6 @@
 import React from 'react';
-import type { BlogPost } from '../types';
+// FIX: Add .ts extension for module resolution
+import type { BlogPost } from '../types.ts';
 
 const BlogPostCard: React.FC<{ post: BlogPost }> = ({ post }) => {
     return (

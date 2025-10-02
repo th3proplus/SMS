@@ -1,5 +1,7 @@
-import { getSettings, saveSettings } from './settingsService';
-import type { Settings } from '../types';
+// FIX: Add .ts extension for module resolution
+import { getSettings, saveSettings } from './settingsService.ts';
+// FIX: Add .ts extension for module resolution
+import type { Settings } from '../types.ts';
 
 // Using new key names to prevent conflicts with the old JSON-based token format during transition.
 const PERSISTENT_AUTH_KEY = 'sms_receiver_auth_expires_at';

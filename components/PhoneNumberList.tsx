@@ -1,6 +1,7 @@
 import React from 'react';
-import type { PhoneNumber } from '../types';
-import PhoneNumberCard from './PhoneNumberCard';
+// FIX: Add .ts extension for module resolution
+import type { PhoneNumber } from '../types.ts';
+import PhoneNumberCard from './PhoneNumberCard.tsx';
 
 interface PhoneNumberListProps {
   numbers: PhoneNumber[];

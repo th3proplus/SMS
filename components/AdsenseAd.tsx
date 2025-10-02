@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { getSettings } from '../services/settingsService';
+// FIX: Add .ts extension for module resolution
+import { getSettings } from '../services/settingsService.ts';
 
 type AdKey = 'homePageAd' | 'numberPageTopAd' | 'numberPageInFeedAd';
 

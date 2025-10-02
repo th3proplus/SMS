@@ -1,5 +1,7 @@
-import type { PhoneNumber, SMSMessage } from '../types';
-import { getSettings } from './settingsService';
+// FIX: Add .ts extension for module resolution
+import type { PhoneNumber, SMSMessage } from '../types.ts';
+// FIX: Add .ts extension for module resolution
+import { getSettings } from './settingsService.ts';
 
 const areSignalWireCredentialsConfigured = (): boolean => {
     const { signalwireSpaceUrl, signalwireProjectId, signalwireApiToken } = getSettings();
