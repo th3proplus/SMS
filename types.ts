@@ -39,6 +39,7 @@ export interface BlogPost {
   featuredImageUrl?: string;
   isPublished: boolean;
   publishedAt: Date;
+  tags?: string[];
   metaTitle?: string;
   metaDescription?: string;
 }

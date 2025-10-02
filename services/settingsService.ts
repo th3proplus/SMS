@@ -42,6 +42,7 @@ const defaultSettings: Settings = {
             featuredImageUrl: 'https://images.unsplash.com/photo-1554224155-169544351720?q=80&w=1000&auto=format&fit=crop',
             isPublished: true,
             publishedAt: new Date('2023-01-01T00:00:00.000Z'),
+            tags: ['Privacy', 'Security', 'Tips'],
             metaTitle: 'Use Temporary Numbers for Privacy | Free SMS Receiver',
             metaDescription: 'Discover how temporary phone numbers can protect your privacy online. Our guide covers best practices and benefits.'
         },
@@ -54,6 +55,7 @@ const defaultSettings: Settings = {
             featuredImageUrl: 'https://images.unsplash.com/photo-1604782206214-f535272a1b9f?q=80&w=1000&auto=format&fit=crop',
             isPublished: true,
             publishedAt: new Date('2023-01-08T00:00:00.000Z'),
+            tags: ['How To', 'Guide'],
             metaTitle: 'Top 5 Reasons for a Free SMS Receiver',
             metaDescription: 'Explore the top benefits of using a free SMS receiving service, from online verification to enhanced privacy and security.'
         }
@@ -78,6 +80,7 @@ export const getSettings = (): Settings => {
                 parsed.posts = parsed.posts.map((post: any) => ({
                     ...post,
                     publishedAt: new Date(post.publishedAt),
+                    tags: post.tags || [], // Ensure tags array exists
                 }));
             }
 

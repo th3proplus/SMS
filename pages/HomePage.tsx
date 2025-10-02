@@ -103,8 +103,8 @@ const HomePage: React.FC = () => {
     numbers.forEach((number, index) => {
         itemsToRender.push(<PhoneNumberCard number={number} key={number.id} />);
         
-        // Insert an ad after the 4th number, making it span the full grid width
-        if (index === 3) {
+        // Insert an ad after the 3rd number, making it span the full grid width
+        if (index === 2) {
             itemsToRender.push(
                 <div key="ad-home" className="md:col-span-2 xl:col-span-3 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg shadow-inner">
                     <AdsenseAd adKey="homePageAd" />
