@@ -39,6 +39,7 @@ export interface BlogPost {
     featuredImageUrl: string;
     isPublished: boolean;
     publishedAt: Date;
+    editorMode?: 'markdown' | 'html';
 }
 
 export interface Settings {

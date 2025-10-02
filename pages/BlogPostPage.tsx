@@ -37,7 +37,9 @@ const BlogPostPage: React.FC<BlogPostPageProps> = ({ slug }) => {
                 description: post.excerpt,
                 path: `/blog/${slug}`,
             });
-            setParsedContent(parseMarkdown(post.content));
+            // Render content as raw HTML if specified, otherwise parse as Markdown (default for old posts)
+            const contentToRender = post.editorMode === 'html' ? post.content : parseMarkdown(post.content);
+            setParsedContent(contentToRender);
         } else if (post === null) {
             updateMetadata({
                 title: `Post Not Found - ${settings.title}`,
