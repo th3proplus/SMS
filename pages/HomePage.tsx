@@ -135,7 +135,7 @@ const HomePage: React.FC = () => {
             {renderNumberList()}
         </div>
         {publishedPosts.length > 0 && (
-            <BlogSection posts={publishedPosts.slice(0, 3)} />
+            <BlogSection posts={publishedPosts.slice(0, 6)} />
         )}
       </main>
       <Footer text={settings.footerText} links={settings.footerLinks} />

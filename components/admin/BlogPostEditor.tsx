@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { BlogPost } from '../../types';
 import { slugify } from '../../utils/string';
-import { parseMarkdown } from '../../utils/markdown';
 import { SaveIcon } from '../icons/SaveIcon';
 import { ChevronDownIcon } from '../icons/ChevronDownIcon';
 import { BoldIcon } from '../icons/BoldIcon';
@@ -9,7 +8,12 @@ import { ItalicIcon } from '../icons/ItalicIcon';
 import { LinkIcon } from '../icons/LinkIcon';
 import { QuoteIcon } from '../icons/QuoteIcon';
 import { ListUnorderedIcon } from '../icons/ListUnorderedIcon';
+import { ListOrderedIcon } from '../icons/ListOrderedIcon';
+import { UnderlineIcon } from '../icons/UnderlineIcon';
+import { StrikethroughIcon } from '../icons/StrikethroughIcon';
 import { XIcon } from '../icons/XIcon';
+import { ImageIcon } from '../icons/ImageIcon';
+import { TextColorIcon } from '../icons/TextColorIcon';
 
 interface AccordionProps {
     title: string;
@@ -88,6 +92,12 @@ const TagInput: React.FC<{ tags: string[]; setTags: (tags: string[]) => void }> 
     );
 };
 
+const ToolbarButton: React.FC<{ onClick: () => void, title: string, children: React.ReactNode }> = ({ onClick, title, children }) => (
+    <button type="button" onClick={onClick} title={title} className="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
+        {children}
+    </button>
+);
+
 interface BlogPostEditorProps {
     post: BlogPost | null;
     onSave: (post: BlogPost) => void;
@@ -101,7 +111,7 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
             id: Date.now().toString(),
             title: '',
             slug: '',
-            content: '',
+            content: '<p>Start writing your masterpiece...</p>',
             excerpt: '',
             featuredImageUrl: '',
             isPublished: false,
@@ -114,11 +124,15 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
 
     const [formData, setFormData] = useState<BlogPost>(getInitialState);
     const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
-    const contentRef = useRef<HTMLTextAreaElement>(null);
+    const editorRef = useRef<HTMLDivElement>(null);
+    const imageContentUploadRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         setFormData(getInitialState());
         setIsSlugManuallyEdited(!!post?.slug);
+        if (editorRef.current) {
+            editorRef.current.innerHTML = getInitialState().content;
+        }
     }, [post, getInitialState]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -145,53 +159,65 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
         setFormData(prev => ({ ...prev, tags: newTags }));
     };
 
-    const handleMarkdownAction = (syntax: 'bold' | 'italic' | 'link' | 'quote' | 'h2' | 'h3' | 'ul') => {
-        const textarea = contentRef.current;
-        if (!textarea) return;
-
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const selectedText = textarea.value.substring(start, end);
-        let newText;
-
-        switch(syntax) {
-            case 'bold':
-                newText = `**${selectedText || 'bold text'}**`;
-                break;
-            case 'italic':
-                newText = `*${selectedText || 'italic text'}*`;
-                break;
-            case 'link':
-                newText = `[${selectedText || 'link text'}](url)`;
-                break;
-            case 'quote':
-                newText = `> ${selectedText || 'quoted text'}`;
-                break;
-            case 'h2':
-                newText = `## ${selectedText || 'Heading 2'}`;
-                break;
-            case 'h3':
-                 newText = `### ${selectedText || 'Heading 3'}`;
-                 break;
-            case 'ul':
-                 newText = `* ${selectedText || 'List item'}`;
-                 break;
-            default:
-                newText = selectedText;
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+    
+        if (file.size > 2 * 1024 * 1024) { // 2MB limit
+            alert("File is too large. Please upload an image under 2MB.");
+            return;
         }
+    
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = reader.result as string;
+            setFormData(prev => ({
+                ...prev,
+                featuredImageUrl: result
+            }));
+        };
+        reader.onerror = (error) => {
+            console.error("Error reading file:", error);
+            alert("There was an error uploading the image.");
+        };
+        reader.readAsDataURL(file);
+    
+        e.target.value = '';
+    };
 
-        const before = textarea.value.substring(0, start);
-        const after = textarea.value.substring(end);
+    const handleEditorInput = (e: React.FormEvent<HTMLDivElement>) => {
+        setFormData(prev => ({ ...prev, content: e.currentTarget.innerHTML }));
+    };
+
+    const executeCommand = (command: string, value?: string) => {
+        document.execCommand(command, false, value);
+        editorRef.current?.focus();
+    };
+    
+    const handleLink = () => {
+        const url = prompt("Enter the URL:");
+        if (url) {
+            executeCommand('createLink', url);
+        }
+    };
+    
+    const handleImageContentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
         
-        textarea.value = before + newText + after;
+        if (file.size > 2 * 1024 * 1024) { // 2MB limit
+            alert("File is too large. Please upload an image under 2MB.");
+            return;
+        }
         
-        // This is a bit of a trick to make React aware of the change
-        const event = new Event('input', { bubbles: true });
-        textarea.dispatchEvent(event);
-        
-        // Focus and set cursor position
-        textarea.focus();
-        textarea.setSelectionRange(start + newText.length, start + newText.length);
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = reader.result as string;
+            const imgHtml = `<img src="${result}" alt="Uploaded image" style="max-width: 100%; height: auto; border-radius: 8px;" />`;
+            executeCommand('insertHTML', imgHtml);
+        };
+        reader.readAsDataURL(file);
+        e.target.value = ''; // Reset file input
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -233,36 +259,65 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
                         <input type="text" id="title" name="title" value={formData.title} onChange={handleChange} required className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-teal-500 rounded-md focus:ring-0 focus:outline-none text-2xl font-extrabold" placeholder="Post Title" />
                     </div>
 
-                    <div className="flex items-center gap-2 p-2 bg-slate-100 dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-700">
-                         <button type="button" onClick={() => handleMarkdownAction('h2')} title="Heading 2" className="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700"><span className="font-bold text-sm">H2</span></button>
-                         <button type="button" onClick={() => handleMarkdownAction('h3')} title="Heading 3" className="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700"><span className="font-bold text-sm">H3</span></button>
+                    <div className="flex items-center gap-1 flex-wrap p-2 bg-slate-100 dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-700">
+                         <ToolbarButton onClick={() => executeCommand('formatBlock', '<h2>')} title="Heading 2"><span className="font-bold text-sm">H2</span></ToolbarButton>
+                         <ToolbarButton onClick={() => executeCommand('formatBlock', '<h3>')} title="Heading 3"><span className="font-bold text-sm">H3</span></ToolbarButton>
                          <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1"></div>
-                        <button type="button" onClick={() => handleMarkdownAction('bold')} title="Bold" className="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700"><BoldIcon className="w-5 h-5" /></button>
-                        <button type="button" onClick={() => handleMarkdownAction('italic')} title="Italic" className="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700"><ItalicIcon className="w-5 h-5" /></button>
+                         <ToolbarButton onClick={() => executeCommand('bold')} title="Bold"><BoldIcon className="w-5 h-5" /></ToolbarButton>
+                         <ToolbarButton onClick={() => executeCommand('italic')} title="Italic"><ItalicIcon className="w-5 h-5" /></ToolbarButton>
+                         <ToolbarButton onClick={() => executeCommand('underline')} title="Underline"><UnderlineIcon className="w-5 h-5" /></ToolbarButton>
+                         <ToolbarButton onClick={() => executeCommand('strikeThrough')} title="Strikethrough"><StrikethroughIcon className="w-5 h-5" /></ToolbarButton>
                          <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1"></div>
-                        <button type="button" onClick={() => handleMarkdownAction('link')} title="Link" className="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700"><LinkIcon className="w-5 h-5" /></button>
-                        <button type="button" onClick={() => handleMarkdownAction('quote')} title="Blockquote" className="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700"><QuoteIcon className="w-5 h-5" /></button>
-                        <button type="button" onClick={() => handleMarkdownAction('ul')} title="Unordered List" className="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700"><ListUnorderedIcon className="w-5 h-5" /></button>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[60vh] min-h-[500px]">
-                        <textarea
-                            ref={contentRef}
-                            id="content"
-                            name="content"
-                            value={formData.content}
-                            onChange={handleChange}
-                            required
-                            className="w-full h-full resize-none p-3 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono text-sm"
-                            placeholder="Start writing your masterpiece in Markdown..."
-                        />
-                        <div className="h-full overflow-y-auto p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md">
-                            <div
-                                className="prose dark:prose-invert max-w-none"
-                                dangerouslySetInnerHTML={{ __html: parseMarkdown(formData.content) }}
+                         <select
+                            onChange={(e) => {
+                                if (e.target.value) {
+                                    executeCommand('fontSize', e.target.value);
+                                    e.target.selectedIndex = 0; // Reset dropdown
+                                }
+                            }}
+                            defaultValue=""
+                            className="bg-transparent text-sm p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 focus:outline-none cursor-pointer"
+                            title="Font Size"
+                        >
+                            <option value="" disabled>Size</option>
+                            <option value="5">Large</option>
+                            <option value="3">Normal</option>
+                            <option value="2">Small</option>
+                        </select>
+                         <div className="relative p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 cursor-pointer" title="Text Color">
+                            <TextColorIcon className="w-5 h-5" />
+                            <input
+                                type="color"
+                                onChange={(e) => executeCommand('foreColor', e.target.value)}
+                                className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"
                             />
                         </div>
+                         <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1"></div>
+                         <ToolbarButton onClick={handleLink} title="Link"><LinkIcon className="w-5 h-5" /></ToolbarButton>
+                         <ToolbarButton onClick={() => executeCommand('formatBlock', '<blockquote>')} title="Blockquote"><QuoteIcon className="w-5 h-5" /></ToolbarButton>
+                         <ToolbarButton onClick={() => executeCommand('insertUnorderedList')} title="Unordered List"><ListUnorderedIcon className="w-5 h-5" /></ToolbarButton>
+                         <ToolbarButton onClick={() => executeCommand('insertOrderedList')} title="Ordered List"><ListOrderedIcon className="w-5 h-5" /></ToolbarButton>
+                         <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1"></div>
+                        <ToolbarButton onClick={() => imageContentUploadRef.current?.click()} title="Upload Image">
+                             <ImageIcon className="w-5 h-5" />
+                        </ToolbarButton>
+                        <input
+                            type="file"
+                            ref={imageContentUploadRef}
+                            accept="image/png, image/jpeg, image/gif, image/webp"
+                            className="sr-only"
+                            onChange={handleImageContentUpload}
+                        />
+
                     </div>
+
+                    <div
+                        ref={editorRef}
+                        contentEditable={true}
+                        onInput={handleEditorInput}
+                        className="w-full h-[60vh] min-h-[500px] resize-none p-4 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none overflow-y-auto prose dark:prose-invert max-w-none"
+                    />
+
                 </div>
 
                 {/* Sidebar */}
@@ -293,13 +348,69 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
                      </Accordion>
 
                     <Accordion title="Featured Image">
-                         <div className="space-y-2">
-                             <label htmlFor="featuredImageUrl" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Image URL</label>
-                             <input type="url" id="featuredImageUrl" name="featuredImageUrl" value={formData.featuredImageUrl} onChange={handleChange} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="https://..."/>
-                             {formData.featuredImageUrl && (
-                                <img src={formData.featuredImageUrl} alt="Preview" className="w-full h-auto rounded-md mt-2 border border-slate-200 dark:border-slate-700" onError={(e) => (e.currentTarget.style.display = 'none')} onLoad={(e) => (e.currentTarget.style.display = 'block')} />
-                             )}
-                         </div>
+                        <div className="space-y-4">
+                            {formData.featuredImageUrl && (
+                                <div className="relative group">
+                                    <img 
+                                        src={formData.featuredImageUrl} 
+                                        alt="Preview" 
+                                        className="w-full h-auto rounded-md border border-slate-200 dark:border-slate-700" 
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, featuredImageUrl: '' }))}
+                                        className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                        title="Remove Image"
+                                    >
+                                        <XIcon className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            )}
+                            
+                            <div className="space-y-2">
+                                <label 
+                                    htmlFor="imageUpload"
+                                    className="cursor-pointer w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-md hover:border-teal-500 dark:hover:border-teal-400 transition-colors text-center"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <span className="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                        Click to upload an image
+                                    </span>
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                                        PNG, JPG, GIF up to 2MB
+                                    </span>
+                                </label>
+                                <input
+                                    id="imageUpload"
+                                    type="file"
+                                    accept="image/png, image/jpeg, image/gif, image/webp"
+                                    className="sr-only"
+                                    onChange={handleImageUpload}
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <div className="flex-grow border-t border-slate-300 dark:border-slate-600"></div>
+                                <span className="text-xs text-slate-500">OR</span>
+                                <div className="flex-grow border-t border-slate-300 dark:border-slate-600"></div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label htmlFor="featuredImageUrl" className="block text-sm font-medium text-slate-600 dark:text-slate-300">Paste an image URL</label>
+                                <input 
+                                    type="url" 
+                                    id="featuredImageUrl" 
+                                    name="featuredImageUrl" 
+                                    value={formData.featuredImageUrl || ''} 
+                                    onChange={handleChange} 
+                                    className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" 
+                                    placeholder="https://..."
+                                />
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Note: Uploaded images are stored in your browser's local storage and can increase the size of your site's data.</p>
+                        </div>
                     </Accordion>
                      
                     <Accordion title="Excerpt">

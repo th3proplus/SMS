@@ -5,7 +5,6 @@ import type { Settings, BlogPost } from '../types';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { ChevronLeftIcon } from '../components/icons/ChevronLeftIcon';
-import { parseMarkdown } from '../utils/markdown';
 
 interface BlogPostPageProps {
     slug: string;
@@ -14,7 +13,6 @@ interface BlogPostPageProps {
 const BlogPostPage: React.FC<BlogPostPageProps> = ({ slug }) => {
     const [settings, setSettings] = useState<Settings>(getSettings());
     const [post, setPost] = useState<BlogPost | null | undefined>(undefined);
-    const [parsedContent, setParsedContent] = useState('');
 
     useEffect(() => {
         const currentSettings = getSettings();
@@ -22,18 +20,11 @@ const BlogPostPage: React.FC<BlogPostPageProps> = ({ slug }) => {
         const foundPost = currentSettings.posts.find(p => p.slug === slug && p.isPublished);
         setPost(foundPost);
 
-        if (foundPost) {
-            setParsedContent(parseMarkdown(foundPost.content));
-        }
-
         const handleSettingsChange = () => {
             const newSettings = getSettings();
             setSettings(newSettings);
             const newFoundPost = newSettings.posts.find(p => p.slug === slug && p.isPublished);
             setPost(newFoundPost);
-            if(newFoundPost) {
-                setParsedContent(parseMarkdown(newFoundPost.content));
-            }
         };
         window.addEventListener('settingsChanged', handleSettingsChange);
         return () => window.removeEventListener('settingsChanged', handleSettingsChange);
@@ -96,7 +87,7 @@ const BlogPostPage: React.FC<BlogPostPageProps> = ({ slug }) => {
                             Published on {new Date(post.publishedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
                         </p>
 
-                        <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: parsedContent }} />
+                        <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: post.content }} />
                     </article>
                 </div>
             </main>

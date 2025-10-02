@@ -34,6 +34,45 @@ const defaultSettings: Settings = {
     publicNumbers: [],
     posts: [
         {
+            id: '1674950400000',
+            title: 'The Ultimate Guide to Online Account Verification',
+            slug: 'online-account-verification-guide',
+            content: 'Signing up for a new online service often involves a verification step. But when should you use your real phone number, and when is a temporary one a better choice?\n\n## When to Use Your Real Number\n\n- **Primary Accounts**: For your primary email, banking, or government services, always use your real, secure phone number. These accounts are tied to your identity and require the highest level of security.\n- **Trusted Services**: Reputable companies with strong privacy policies that you plan to use long-term are generally safe for your real number.\n\n## When to Use a Temporary Number\n\n- **One-Time Sign-Ups**: Need to access content on a site you\'ll likely never visit again? A temporary number is perfect.\n- **Testing an App**: If you\'re trying out a new app or service and aren\'t sure you\'ll stick with it, protect your privacy by using a disposable number.\n- **Avoiding Marketing Lists**: Signing up for a discount or loyalty program can often lead to a flood of marketing texts. Use a temporary number to keep your personal line clean.\n\nBy being strategic about which number you provide, you can enjoy the benefits of online services while minimizing spam and protecting your personal information.',
+            excerpt: 'Signing up for a new service? Our guide helps you decide when to use your real phone number and when a temporary one is the smarter, safer choice.',
+            featuredImageUrl: 'https://images.unsplash.com/photo-1611926653458-0929221b27cf?q=80&w=1000&auto=format&fit=crop',
+            isPublished: true,
+            publishedAt: new Date('2023-01-29T00:00:00.000Z'),
+            tags: ['Verification', 'Tips', 'Security'],
+            metaTitle: 'The Guide to Online Account Verification | Free SMS Receiver',
+            metaDescription: 'Learn the best practices for online account verification. Know when to use a temporary number to protect your privacy and avoid spam.'
+        },
+        {
+            id: '1674345600000',
+            title: 'What Are Virtual Phone Numbers and How Do They Work?',
+            slug: 'what-are-virtual-phone-numbers',
+            content: 'Virtual phone numbers, like the ones on our site, work without being tied to a specific physical device or SIM card. But how is that possible?\n\n### The Magic of the Cloud\n\nInstead of relying on traditional phone lines, virtual numbers operate over the internet using Voice over IP (VoIP) technology. Here\'s a simple breakdown:\n\n1.  **A Number in the Cloud**: When you select one of our numbers, you\'re choosing a number that exists on a cloud communications platform (like Twilio or SignalWire).\n2.  **Receiving the SMS**: When a service sends an SMS to that number, it\'s first received by the cloud platform.\n3.  **Forwarding via API**: The platform then uses an API to instantly forward the message content to our website.\n4.  **Displaying the Message**: Our application receives this data and displays it on the number\'s page for you to see in real-time.\n\nThis process is incredibly fast and allows a single number to be managed entirely through software, making it accessible from anywhere in the world through a web browser.',
+            excerpt: 'Ever wondered how virtual numbers work without a SIM card? We break down the technology behind our free SMS receiver service.',
+            featuredImageUrl: 'https://images.unsplash.com/photo-1523961131990-5ea7c61b2107?q=80&w=1000&auto=format&fit=crop',
+            isPublished: true,
+            publishedAt: new Date('2023-01-22T00:00:00.000Z'),
+            tags: ['Technology', 'How To', 'Explanation'],
+            metaTitle: 'How Virtual Phone Numbers Work | Tech Explained',
+            metaDescription: 'A simple explanation of the technology behind virtual phone numbers and how they can receive SMS online without a physical SIM card.'
+        },
+        {
+            id: '1673740800000',
+            title: 'Securing Your Digital Footprint: Beyond Temporary Numbers',
+            slug: 'securing-your-digital-footprint',
+            content: 'Using a temporary number is an excellent first step in protecting your digital privacy, but it\'s part of a larger strategy. To truly secure your online presence, consider these additional tools and habits:\n\n### Use a Password Manager\nCreating strong, unique passwords for every site is the single most effective thing you can do for your security. A password manager makes this easy by generating and storing complex passwords for you.\n\n### Enable Two-Factor Authentication (2FA)\nWhenever possible, enable 2FA on your important accounts. This adds a second layer of security, typically a code from an authenticator app, making it much harder for unauthorized users to gain access even if they have your password.\n\n### Be Wary of Public Wi-Fi\nPublic Wi-Fi networks can be insecure. When using them, avoid logging into sensitive accounts. For better protection, use a Virtual Private Network (VPN) to encrypt your internet traffic and hide your activity from prying eyes.\n\nBy combining these practices, you create a robust defense for your digital life.',
+            excerpt: 'While temporary numbers are great for sign-ups, true online security requires a multi-layered approach. Learn about other essential tools.',
+            featuredImageUrl: 'https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?q=80&w=1000&auto=format&fit=crop',
+            isPublished: true,
+            publishedAt: new Date('2023-01-15T00:00:00.000Z'),
+            tags: ['Security', 'Privacy', 'Guide'],
+            metaTitle: 'How to Secure Your Digital Footprint | Advanced Privacy Tips',
+            metaDescription: 'Go beyond temporary phone numbers. Learn how to use password managers, two-factor authentication (2FA), and VPNs to secure your online life.'
+        },
+        {
             id: '1672531200000',
             title: 'How to Use Temporary Numbers for Online Privacy',
             slug: 'temporary-numbers-for-privacy',
