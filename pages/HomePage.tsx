@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { PhoneNumber, Settings, BlogPost } from '../types';
 import { getAvailableNumbers } from '../services/smsService';
-import { getLatestPosts } from '../services/wordpressService';
 import { getSettings } from '../services/settingsService';
 import { updateMetadata } from '../services/seoService';
 import Header from '../components/Header';
@@ -18,10 +17,6 @@ const HomePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(initialNumbers.length === 0);
 
-  const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [isBlogLoading, setIsBlogLoading] = useState(false);
-  const [blogError, setBlogError] = useState<string | null>(null);
-  
   useEffect(() => {
     updateMetadata({
         title: `${settings.title} - Receive SMS Online Free`,
@@ -43,51 +38,12 @@ const HomePage: React.FC = () => {
         setIsLoading(false);
       }
     };
-
-    const fetchBlogPosts = async () => {
-        const currentSettings = getSettings();
-        // FIX: The condition was inverted, causing posts to be fetched when the blog was disabled.
-        if (currentSettings.enableBlogSection) {
-            // Use demo posts if enabled but no URL is set
-            if (currentSettings.wordpressUrl) {
-                setIsBlogLoading(true);
-                setBlogError(null);
-                try {
-                    const postsData = await getLatestPosts(3);
-                    setPosts(postsData);
-                } catch (err: any) {
-                    setBlogError('Could not load blog posts.');
-                    console.error(err);
-                    // Fallback to demo posts on error
-                    const { demoPosts } = await import('../services/wordpressService');
-                    setPosts(demoPosts);
-                } finally {
-                    setIsBlogLoading(false);
-                }
-            } else {
-                 const { demoPosts } = await import('../services/wordpressService');
-                 setPosts(demoPosts);
-                 setIsBlogLoading(false);
-                 setBlogError(null);
-            }
-        } else {
-            setPosts([]);
-            setIsBlogLoading(false);
-            setBlogError(null);
-        }
-    };
     
-    const initialFetch = () => {
-        fetchNumbers();
-        fetchBlogPosts();
-    };
-
-    initialFetch();
+    fetchNumbers();
     const numberInterval = setInterval(fetchNumbers, 5000);
     
     const handleSettingsChange = () => {
         setSettings(getSettings());
-        fetchBlogPosts(); // Refetch blog posts if settings change
     }
     window.addEventListener('settingsChanged', handleSettingsChange);
 
@@ -159,6 +115,10 @@ const HomePage: React.FC = () => {
     return itemsToRender;
   }
 
+  const publishedPosts = settings.posts
+    .filter(p => p.isPublished)
+    .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header title={settings.title} links={settings.footerLinks} showAdminLink={true} />
@@ -174,8 +134,8 @@ const HomePage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {renderNumberList()}
         </div>
-        {settings.enableBlogSection && (
-            <BlogSection posts={posts} isLoading={isBlogLoading} error={blogError} />
+        {publishedPosts.length > 0 && (
+            <BlogSection posts={publishedPosts.slice(0, 3)} />
         )}
       </main>
       <Footer text={settings.footerText} links={settings.footerLinks} />

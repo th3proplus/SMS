@@ -8,6 +8,8 @@ import AdminPage from './pages/AdminPage';
 import NumberPage from './pages/NumberPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import TextContentPage from './pages/TextContentPage';
+import BlogIndexPage from './pages/BlogIndexPage';
+import BlogPostPage from './pages/BlogPostPage';
 
 const App: React.FC = () => {
     const [pathname, setPathname] = useState(window.location.pathname);
@@ -36,7 +38,7 @@ const App: React.FC = () => {
             window.removeEventListener('popstate', handlePopState);
             window.removeEventListener('settingsChanged', handleSettingsChange);
         };
-    }, []); // FIX: Use empty dependency array to run this effect only once on mount
+    }, []);
 
     // Global link click handler for client-side routing
     useEffect(() => {
@@ -131,6 +133,11 @@ const App: React.FC = () => {
             return <NumberPage phoneNumber={phoneNumber} />;
         }
         
+        if (pathname.startsWith('/blog/')) {
+            const slug = decodeURIComponent(pathname.substring(6));
+            return <BlogPostPage slug={slug} />;
+        }
+        
         switch (pathname) {
             case '/login':
                 return <LoginPage />;
@@ -146,6 +153,8 @@ const App: React.FC = () => {
                 return <TextContentPage title="Privacy Policy" content={settings.privacyPageContent} />;
             case '/terms':
                 return <TextContentPage title="Terms of Service" content={settings.termsPageContent} />;
+            case '/blog':
+                return <BlogIndexPage />;
             case '/':
             default:
                 return <HomePage />;

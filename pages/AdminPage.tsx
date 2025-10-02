@@ -22,6 +22,8 @@ import { WebhookIcon } from '../components/icons/WebhookIcon';
 import { timeAgo } from '../utils/time';
 import { CopyIcon } from '../components/icons/CopyIcon';
 import { GripVerticalIcon } from '../components/icons/GripVerticalIcon';
+import { NewspaperIcon } from '../components/icons/NewspaperIcon';
+import BlogManagementPanel from '../components/admin/BlogManagementPanel';
 
 
 interface TabButtonProps {
@@ -167,29 +169,6 @@ async function handleRequest(request) {
                         <textarea id="headCode" name="headCode" value={settings.headCode} onChange={handleChange} rows={6} className="w-full font-mono text-xs px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="<script>...</script> or <meta ...>" />
                         <p className="text-xs text-slate-500 mt-1">Code entered here will be injected into the site's &lt;head&gt; tag. Use for analytics, AdSense script, etc.</p>
                     </div>
-                </div>
-            </div>
-
-            <div>
-                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-2 mb-4">Blog Integration (WordPress)</h2>
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between pt-2">
-                        <div className="flex flex-col">
-                            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Enable Blog Section on Homepage</span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">Show the latest posts from your blog.</span>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="enableBlogSection" checked={settings.enableBlogSection} onChange={handleChange} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-500 peer-checked:bg-teal-600"></div>
-                        </label>
-                    </div>
-                    {settings.enableBlogSection && (
-                        <div>
-                            <label htmlFor="wordpressUrl" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">WordPress Site URL</label>
-                            <input type="url" id="wordpressUrl" name="wordpressUrl" value={settings.wordpressUrl} onChange={handleChange} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono" placeholder="https://your-blog.com" />
-                            <p className="text-xs text-slate-500 mt-1">Your WordPress site's REST API must be publicly accessible. Leave blank to show demo posts.</p>
-                        </div>
-                    )}
                 </div>
             </div>
 
@@ -993,6 +972,8 @@ const AdminPage: React.FC = () => {
                 return <SettingsPanel />;
             case 'numbers':
                 return <NumbersPanel />;
+            case 'blog':
+                return <BlogManagementPanel />;
             case 'webhooks':
                 return <WebhookLogsPanel />;
             case 'pages':
@@ -1043,6 +1024,7 @@ const AdminPage: React.FC = () => {
                         <nav className="flex flex-row md:flex-col gap-2 bg-white dark:bg-slate-800 p-3 rounded-lg shadow-md">
                             <TabButton icon={<SettingsIcon className="w-5 h-5" />} label="General Settings" tabName="settings" activeTab={activeTab} setActiveTab={setActiveTab} />
                             <TabButton icon={<PhoneIcon className="w-5 h-5" />} label="Phone Numbers" tabName="numbers" activeTab={activeTab} setActiveTab={setActiveTab} />
+                            <TabButton icon={<NewspaperIcon className="w-5 h-5" />} label="Blog" tabName="blog" activeTab={activeTab} setActiveTab={setActiveTab} />
                             <TabButton icon={<WebhookIcon className="w-5 h-5" />} label="Webhook Logs" tabName="webhooks" activeTab={activeTab} setActiveTab={setActiveTab} />
                             <TabButton icon={<DocumentIcon className="w-5 h-5" />} label="Pages & Footer" tabName="pages" activeTab={activeTab} setActiveTab={setActiveTab} />
                             <TabButton icon={<DollarIcon className="w-5 h-5" />} label="Advertising" tabName="advertising" activeTab={activeTab} setActiveTab={setActiveTab} />
