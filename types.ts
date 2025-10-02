@@ -1,8 +1,3 @@
-export interface FooterLink {
-  text: string;
-  url: string;
-}
-
 export interface PhoneNumber {
   id: string;
   number: string;
@@ -26,62 +21,53 @@ export interface WebhookLog {
     id: string;
     timestamp: Date;
     logLevel: 'error' | 'warning' | 'notice';
-    errorCode: string;
+    errorCode: string | null;
     message: string;
 }
 
+export interface FooterLink {
+    text: string;
+    url: string;
+}
+
 export interface BlogPost {
-    id: string;
-    title: string;
-    slug: string;
-    content: string;
-    excerpt: string;
-    featuredImageUrl: string;
-    isPublished: boolean;
-    publishedAt: Date;
-    editorMode?: 'markdown' | 'html';
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  excerpt: string;
+  featuredImageUrl?: string;
+  isPublished: boolean;
+  publishedAt: Date;
+  tags?: string[];
+  metaTitle?: string;
+  metaDescription?: string;
 }
 
 export interface Settings {
-  title: string;
-  description: string;
-  theme: 'light' | 'dark';
-  headCode: string;
-
-  // Twilio
-  twilioAccountSid: string;
-  twilioAuthToken: string;
-
-  // SignalWire
-  signalwireSpaceUrl: string;
-  signalwireProjectId: string;
-  signalwireApiToken: string;
-  
-  // Proxy
-  proxyUrl: string;
-
-  // Admin
-  adminUsername: string;
-  adminPassword: string;
-
-  // Public Numbers
-  publicNumbers: PhoneNumber[];
-  
-  // Content
-  footerText: string;
-  footerLinks: FooterLink[];
-  aboutPageContent: string;
-  privacyPageContent: string;
-  termsPageContent: string;
-  
-  // Blog
-  posts: BlogPost[];
-
-  // Ads
-  adsenseEnabled: boolean;
-  ads: {
-    homePageAd: string;
-    numberPageTopAd: string;
-    numberPageInFeedAd: string;
-  };
+    title: string;
+    description: string;
+    theme: 'light' | 'dark';
+    footerText: string;
+    footerLinks: FooterLink[];
+    aboutPageContent: string;
+    privacyPageContent: string;
+    termsPageContent: string;
+    adsenseEnabled: boolean;
+    headCode: string;
+    ads: {
+        homePageAd: string;
+        numberPageTopAd: string;
+        numberPageInFeedAd: string;
+    };
+    proxyUrl: string;
+    twilioAccountSid: string;
+    twilioAuthToken: string;
+    signalwireSpaceUrl: string;
+    signalwireProjectId: string;
+    signalwireApiToken: string;
+    adminUsername: string;
+    adminPassword: string;
+    publicNumbers: PhoneNumber[];
+    posts: BlogPost[];
 }

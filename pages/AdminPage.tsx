@@ -1,32 +1,29 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { logout, updateCredentials } from '../services/authService.ts';
-// FIX: Add .ts extension for module resolution
-import { getSettings, saveSettings, applyTheme } from '../services/settingsService.ts';
-import { getOwnedNumbers, getWebhookLogs, demoNumbers } from '../services/twilioService.ts';
-import { getOwnedNumbers as getSignalWireNumbers } from '../services/signalwireService.ts';
-import { navigate } from '../services/navigationService.ts';
-// FIX: Add .ts extension for module resolution
-import type { Settings, PhoneNumber, FooterLink, WebhookLog } from '../types.ts';
-import { AdminIcon } from '../components/icons/AdminIcon.tsx';
-import { LogoutIcon } from '../components/icons/LogoutIcon.tsx';
-import { SettingsIcon } from '../components/icons/SettingsIcon.tsx';
-import { PhoneIcon } from '../components/icons/PhoneIcon.tsx';
-import { TrashIcon } from '../components/icons/TrashIcon.tsx';
-import { PlusIcon } from '../components/icons/PlusIcon.tsx';
-import { EyeIcon } from '../components/icons/EyeIcon.tsx';
-import { DocumentIcon } from '../components/icons/DocumentIcon.tsx';
-import { PencilIcon } from '../components/icons/PencilIcon.tsx';
-import { DollarIcon } from '../components/icons/DollarIcon.tsx';
-import { ShieldIcon } from '../components/icons/ShieldIcon.tsx';
-import { RefreshIcon } from '../components/icons/RefreshIcon.tsx';
-import { SaveIcon } from '../components/icons/SaveIcon.tsx';
-import { WebhookIcon } from '../components/icons/WebhookIcon.tsx';
-import { timeAgo } from '../utils/time.ts';
-import { CopyIcon } from '../components/icons/CopyIcon.tsx';
-import { GripVerticalIcon } from '../components/icons/GripVerticalIcon.tsx';
-import { NewspaperIcon } from '../components/icons/NewspaperIcon.tsx';
-// FIX: Add .tsx extension for module resolution
-import BlogManagementPanel from '../components/admin/BlogManagementPanel.tsx';
+import { logout, updateCredentials } from '../services/authService';
+import { getSettings, saveSettings, applyTheme } from '../services/settingsService';
+import { getOwnedNumbers, getWebhookLogs, demoNumbers } from '../services/twilioService';
+import { getOwnedNumbers as getSignalWireNumbers } from '../services/signalwireService';
+import { navigate } from '../services/navigationService';
+import type { Settings, PhoneNumber, FooterLink, WebhookLog } from '../types';
+import { AdminIcon } from '../components/icons/AdminIcon';
+import { LogoutIcon } from '../components/icons/LogoutIcon';
+import { SettingsIcon } from '../components/icons/SettingsIcon';
+import { PhoneIcon } from '../components/icons/PhoneIcon';
+import { TrashIcon } from '../components/icons/TrashIcon';
+import { PlusIcon } from '../components/icons/PlusIcon';
+import { EyeIcon } from '../components/icons/EyeIcon';
+import { DocumentIcon } from '../components/icons/DocumentIcon';
+import { PencilIcon } from '../components/icons/PencilIcon';
+import { DollarIcon } from '../components/icons/DollarIcon';
+import { ShieldIcon } from '../components/icons/ShieldIcon';
+import { RefreshIcon } from '../components/icons/RefreshIcon';
+import { SaveIcon } from '../components/icons/SaveIcon';
+import { WebhookIcon } from '../components/icons/WebhookIcon';
+import { timeAgo } from '../utils/time';
+import { CopyIcon } from '../components/icons/CopyIcon';
+import { GripVerticalIcon } from '../components/icons/GripVerticalIcon';
+import { NewspaperIcon } from '../components/icons/NewspaperIcon';
+import BlogManagementPanel from '../components/admin/BlogManagementPanel';
 
 
 interface TabButtonProps {

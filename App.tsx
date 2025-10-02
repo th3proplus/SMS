@@ -1,18 +1,15 @@
 import React, { useState, useEffect } from 'react';
-// FIX: Add .ts extension for module resolution
-import { getSettings, applyTheme } from './services/settingsService.ts';
-import { navigate } from './services/navigationService.ts';
-// FIX: Add .ts extension for module resolution
-import type { Settings } from './types.ts';
-import HomePage from './pages/HomePage.tsx';
-import LoginPage from './pages/LoginPage.tsx';
-import AdminPage from './pages/AdminPage.tsx';
-import NumberPage from './pages/NumberPage.tsx';
-import ProtectedRoute from './components/ProtectedRoute.tsx';
-import TextContentPage from './pages/TextContentPage.tsx';
-import BlogIndexPage from './pages/BlogIndexPage.tsx';
-// FIX: Add .tsx extension for module resolution
-import BlogPostPage from './pages/BlogPostPage.tsx';
+import { getSettings, applyTheme } from './services/settingsService';
+import { navigate } from './services/navigationService';
+import type { Settings } from './types';
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import AdminPage from './pages/AdminPage';
+import NumberPage from './pages/NumberPage';
+import ProtectedRoute from './components/ProtectedRoute';
+import TextContentPage from './pages/TextContentPage';
+import BlogIndexPage from './pages/BlogIndexPage';
+import BlogPostPage from './pages/BlogPostPage';
 
 const App: React.FC = () => {
     const [pathname, setPathname] = useState(window.location.pathname);

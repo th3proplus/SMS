@@ -1,9 +1,7 @@
-// FIX: Add .ts extension for module resolution
-import type { PhoneNumber, SMSMessage } from '../types.ts';
-import * as twilioService from './twilioService.ts';
-import * as signalwireService from './signalwireService.ts';
-// FIX: Add .ts extension for module resolution
-import { getSettings } from './settingsService.ts';
+import type { PhoneNumber, SMSMessage } from '../types';
+import * as twilioService from './twilioService';
+import * as signalwireService from './signalwireService';
+import { getSettings } from './settingsService';
 
 export const getAvailableNumbers = async (): Promise<PhoneNumber[]> => {
     const settings = getSettings();

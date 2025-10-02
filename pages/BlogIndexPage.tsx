@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-// FIX: Add .ts extension for module resolution
-import { getSettings } from '../services/settingsService.ts';
-import { updateMetadata } from '../services/seoService.ts';
-// FIX: Add .ts extension for module resolution
-import type { Settings, BlogPost } from '../types.ts';
-import Header from '../components/Header.tsx';
-import Footer from '../components/Footer.tsx';
-import { ArrowRightIcon } from '../components/icons/ArrowRightIcon.tsx';
+import { getSettings } from '../services/settingsService';
+import { updateMetadata } from '../services/seoService';
+import type { Settings, BlogPost } from '../types';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+import { ArrowRightIcon } from '../components/icons/ArrowRightIcon';
 
 const BlogCard: React.FC<{ post: BlogPost }> = ({ post }) => (
     <a href={`/blog/${post.slug}`} className="group flex flex-col bg-white dark:bg-slate-800 rounded-xl shadow-md hover:shadow-lg dark:hover:shadow-teal-900/30 border border-slate-200 dark:border-slate-700 transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">

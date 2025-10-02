@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
-// FIX: Add .ts extension for module resolution
-import type { PhoneNumber, Settings, BlogPost } from '../types.ts';
-import { getAvailableNumbers } from '../services/smsService.ts';
-// FIX: Add .ts extension for module resolution
-import { getSettings } from '../services/settingsService.ts';
-import { updateMetadata } from '../services/seoService.ts';
-import Header from '../components/Header.tsx';
-import PhoneNumberCard from '../components/PhoneNumberCard.tsx';
-import Footer from '../components/Footer.tsx';
-import AdsenseAd from '../components/AdsenseAd.tsx';
-import BlogSection from '../components/BlogSection.tsx';
+import type { PhoneNumber, Settings, BlogPost } from '../types';
+import { getAvailableNumbers } from '../services/smsService';
+import { getSettings } from '../services/settingsService';
+import { updateMetadata } from '../services/seoService';
+import Header from '../components/Header';
+import PhoneNumberCard from '../components/PhoneNumberCard';
+import Footer from '../components/Footer';
+import AdsenseAd from '../components/AdsenseAd';
+import BlogSection from '../components/BlogSection';
 
 const HomePage: React.FC = () => {
   const [settings, setSettings] = useState<Settings>(getSettings());

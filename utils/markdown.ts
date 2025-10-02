@@ -2,10 +2,8 @@
 export const parseMarkdown = (text: string): string => {
     if (!text) return '';
 
-    let processedText = text;
-
     // Process markdown line by line
-    const lines = processedText.split('\n');
+    const lines = text.split('\n');
     let html = '';
     let inList = false;
 
@@ -48,12 +46,6 @@ export const parseMarkdown = (text: string): string => {
              html += `<blockquote class="border-l-4 border-slate-300 dark:border-slate-600 pl-4 italic my-4 text-slate-600 dark:text-slate-300">${line.substring(2)}</blockquote>\n`;
              continue;
         }
-        
-        // Pass through existing HTML tags without wrapping in <p>
-        if (line.trim().match(/^<.*>$/)) {
-            html += line + '\n';
-            continue;
-        }
 
         // Paragraph
         if (line.trim() !== '') {
@@ -66,8 +58,6 @@ export const parseMarkdown = (text: string): string => {
     }
 
     // Inline elements (run on the whole block)
-    // Images: ![alt](url)
-    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="my-4 rounded-lg shadow-md" style="max-width: 100%;" />');
     // Links: [text](url)
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-teal-500 dark:text-teal-400 hover:underline">$1</a>');
     // Bold: **text**

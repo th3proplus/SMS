@@ -1,22 +1,92 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import type { BlogPost } from '../../types.ts';
-import { slugify } from '../../utils/string.ts';
-import { parseMarkdown } from '../../utils/markdown.ts';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import type { BlogPost } from '../../types';
+import { slugify } from '../../utils/string';
+import { parseMarkdown } from '../../utils/markdown';
+import { SaveIcon } from '../icons/SaveIcon';
+import { ChevronDownIcon } from '../icons/ChevronDownIcon';
+import { BoldIcon } from '../icons/BoldIcon';
+import { ItalicIcon } from '../icons/ItalicIcon';
+import { LinkIcon } from '../icons/LinkIcon';
+import { QuoteIcon } from '../icons/QuoteIcon';
+import { ListUnorderedIcon } from '../icons/ListUnorderedIcon';
+import { XIcon } from '../icons/XIcon';
 
-// Icons for the toolbar
-import { BoldIcon } from '../icons/BoldIcon.tsx';
-import { ItalicIcon } from '../icons/ItalicIcon.tsx';
-import { LinkIcon } from '../icons/LinkIcon.tsx';
-import { QuoteIcon } from '../icons/QuoteIcon.tsx';
-import { ListUnorderedIcon } from '../icons/ListUnorderedIcon.tsx';
-import { PhotoIcon } from '../icons/PhotoIcon.tsx';
-import { CodeBracketIcon } from '../icons/CodeBracketIcon.tsx';
-import { MarkdownIcon } from '../icons/MarkdownIcon.tsx';
-import { ArrowsPointingOutIcon } from '../icons/ArrowsPointingOutIcon.tsx';
-import { ArrowsPointingInIcon } from '../icons/ArrowsPointingInIcon.tsx';
-import { PaletteIcon } from '../icons/PaletteIcon.tsx';
-import { TrashIcon } from '../icons/TrashIcon.tsx';
+interface AccordionProps {
+    title: string;
+    children: React.ReactNode;
+    defaultOpen?: boolean;
+}
 
+const Accordion: React.FC<AccordionProps> = ({ title, children, defaultOpen = false }) => {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
+    return (
+        <div className="border border-slate-200 dark:border-slate-700 rounded-md">
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex justify-between items-center p-3 bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            >
+                <h3 className="font-semibold text-sm text-slate-700 dark:text-slate-200">{title}</h3>
+                <ChevronDownIcon className={`w-5 h-5 text-slate-500 dark:text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isOpen && <div className="p-4 border-t border-slate-200 dark:border-slate-700">{children}</div>}
+        </div>
+    );
+};
+
+
+const SERPPreview: React.FC<{ title: string; description: string; slug: string }> = ({ title, description, slug }) => {
+    const siteUrl = window.location.origin;
+    return (
+        <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-md">
+            <p className="text-sm text-blue-800 dark:text-blue-400 truncate group-hover:underline">{title || "Your Post Title Will Appear Here"}</p>
+            <p className="text-xs text-green-700 dark:text-green-500">{`${siteUrl}/blog/${slug || 'your-post-slug'}`}</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">{description || "Your meta description will appear here. Keep it concise and engaging to attract readers."}</p>
+        </div>
+    );
+};
+
+const TagInput: React.FC<{ tags: string[]; setTags: (tags: string[]) => void }> = ({ tags, setTags }) => {
+    const [inputValue, setInputValue] = useState('');
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            const newTag = inputValue.trim();
+            if (newTag && !tags.includes(newTag)) {
+                setTags([...tags, newTag]);
+            }
+            setInputValue('');
+        }
+    };
+
+    const removeTag = (tagToRemove: string) => {
+        setTags(tags.filter(tag => tag !== tagToRemove));
+    };
+
+    return (
+        <div>
+            <div className="flex flex-wrap gap-2 mb-2">
+                {tags.map(tag => (
+                    <div key={tag} className="flex items-center gap-1 bg-teal-100 dark:bg-teal-900/50 text-teal-800 dark:text-teal-300 text-xs font-semibold px-2 py-1 rounded-full">
+                        <span>{tag}</span>
+                        <button type="button" onClick={() => removeTag(tag)} className="text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-200">
+                            <XIcon className="w-3 h-3" />
+                        </button>
+                    </div>
+                ))}
+            </div>
+            <input
+                type="text"
+                value={inputValue}
+                onChange={e => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                placeholder="Add tags (press Enter)"
+            />
+        </div>
+    );
+};
 
 interface BlogPostEditorProps {
     post: BlogPost | null;
@@ -25,256 +95,235 @@ interface BlogPostEditorProps {
 }
 
 const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel }) => {
-    const [formData, setFormData] = useState({
-        title: '',
-        slug: '',
-        content: '',
-        excerpt: '',
-        featuredImageUrl: '',
-        isPublished: false,
-        publishedAt: new Date().toISOString().split('T')[0], // YYYY-MM-DD
-        editorMode: 'markdown' as 'markdown' | 'html',
-    });
-    const [isFullscreen, setIsFullscreen] = useState(false);
-    
-    const contentRef = useRef<HTMLTextAreaElement>(null);
-    const colorPickerRef = useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-        if (post) {
-            setFormData({
-                ...post,
-                publishedAt: new Date(post.publishedAt).toISOString().split('T')[0],
-                editorMode: post.editorMode || 'markdown',
-            });
-        }
+    const getInitialState = useCallback(() => {
+        if (post) return { ...post, tags: post.tags || [] }; // Ensure tags is an array
+        return {
+            id: Date.now().toString(),
+            title: '',
+            slug: '',
+            content: '',
+            excerpt: '',
+            featuredImageUrl: '',
+            isPublished: false,
+            publishedAt: new Date(),
+            tags: [],
+            metaTitle: '',
+            metaDescription: '',
+        };
     }, [post]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const [formData, setFormData] = useState<BlogPost>(getInitialState);
+    const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
+    const contentRef = useRef<HTMLTextAreaElement>(null);
+
+    useEffect(() => {
+        setFormData(getInitialState());
+        setIsSlugManuallyEdited(!!post?.slug);
+    }, [post, getInitialState]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
-        
-        if (type === 'checkbox') {
-            setFormData(prev => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
-        } else {
-            setFormData(prev => ({ ...prev, [name]: value }));
+        const checked = (e.target as HTMLInputElement).checked;
+
+        if (name === 'title' && !isSlugManuallyEdited) {
+            setFormData(prev => ({ ...prev, title: value, slug: slugify(value) }));
+        } else if (name === 'slug') {
+            setIsSlugManuallyEdited(true);
+            setFormData(prev => ({ ...prev, slug: slugify(value) }));
+        } else if (name === 'publishedAt') {
+            setFormData(prev => ({ ...prev, publishedAt: new Date(value) }));
         }
-    };
-
-    const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newTitle = e.target.value;
-        setFormData(prev => ({
-            ...prev,
-            title: newTitle,
-            slug: post?.slug ? prev.slug : slugify(newTitle) // Don't auto-update slug if post already exists
-        }));
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        const finalPost: BlogPost = {
-            id: post?.id || Date.now().toString(),
-            title: formData.title.trim(),
-            slug: formData.slug.trim() || slugify(formData.title.trim()),
-            content: formData.content,
-            excerpt: formData.excerpt.trim(),
-            featuredImageUrl: formData.featuredImageUrl.trim(),
-            isPublished: formData.isPublished,
-            publishedAt: new Date(formData.publishedAt || Date.now()),
-            editorMode: formData.editorMode,
-        };
-        onSave(finalPost);
-    };
-
-    const handleFileUpload = (file: File, callback: (base64: string) => void) => {
-        if (file && file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                if (typeof e.target?.result === 'string') {
-                    callback(e.target.result);
-                }
-            };
-            reader.readAsDataURL(file);
-        } else {
-            alert('Please select a valid image file.');
-        }
-    };
-
-    const handleContentImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            handleFileUpload(e.target.files[0], (base64) => {
-                insertMarkdown(`\n![${e.target.files?.[0].name || 'image'}](${base64})\n`, '', '');
-            });
+        else {
+            setFormData(prev => ({
+                ...prev,
+                [name]: type === 'checkbox' ? checked : value,
+            }));
         }
     };
     
-    const handleFeaturedImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            handleFileUpload(e.target.files[0], (base64) => {
-                setFormData(prev => ({ ...prev, featuredImageUrl: base64 }));
-            });
-        }
+    const handleTagsChange = (newTags: string[]) => {
+        setFormData(prev => ({ ...prev, tags: newTags }));
     };
 
-    const insertMarkdown = (prefix: string, suffix: string = '', placeholder: string = 'text') => {
+    const handleMarkdownAction = (syntax: 'bold' | 'italic' | 'link' | 'quote' | 'h2' | 'h3' | 'ul') => {
         const textarea = contentRef.current;
         if (!textarea) return;
 
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
         const selectedText = textarea.value.substring(start, end);
+        let newText;
 
-        const textToInsert = selectedText || placeholder;
+        switch(syntax) {
+            case 'bold':
+                newText = `**${selectedText || 'bold text'}**`;
+                break;
+            case 'italic':
+                newText = `*${selectedText || 'italic text'}*`;
+                break;
+            case 'link':
+                newText = `[${selectedText || 'link text'}](url)`;
+                break;
+            case 'quote':
+                newText = `> ${selectedText || 'quoted text'}`;
+                break;
+            case 'h2':
+                newText = `## ${selectedText || 'Heading 2'}`;
+                break;
+            case 'h3':
+                 newText = `### ${selectedText || 'Heading 3'}`;
+                 break;
+            case 'ul':
+                 newText = `* ${selectedText || 'List item'}`;
+                 break;
+            default:
+                newText = selectedText;
+        }
+
+        const before = textarea.value.substring(0, start);
+        const after = textarea.value.substring(end);
         
-        const newText = `${textarea.value.substring(0, start)}${prefix}${textToInsert}${suffix}${textarea.value.substring(end)}`;
+        textarea.value = before + newText + after;
         
-        setFormData(prev => ({ ...prev, content: newText }));
+        // This is a bit of a trick to make React aware of the change
+        const event = new Event('input', { bubbles: true });
+        textarea.dispatchEvent(event);
         
-        setTimeout(() => {
-            textarea.focus();
-            if (!selectedText) {
-                 textarea.selectionStart = start + prefix.length;
-                 textarea.selectionEnd = start + prefix.length + placeholder.length;
-            } else {
-                textarea.selectionStart = start + prefix.length;
-                textarea.selectionEnd = end + prefix.length;
-            }
-        }, 0);
+        // Focus and set cursor position
+        textarea.focus();
+        textarea.setSelectionRange(start + newText.length, start + newText.length);
     };
-    
-    const previewContent = useMemo(() => {
-        return formData.editorMode === 'html' ? formData.content : parseMarkdown(formData.content);
-    }, [formData.content, formData.editorMode]);
 
-    const editorClasses = isFullscreen 
-        ? 'fixed inset-0 z-50 bg-white dark:bg-slate-800 flex flex-col'
-        : 'bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md space-y-6';
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave(formData);
+    };
+
+    const dateForInput = (date: Date) => {
+        const pad = (num: number) => num.toString().padStart(2, '0');
+        const year = date.getFullYear();
+        const month = pad(date.getMonth() + 1);
+        const day = pad(date.getDate());
+        const hours = pad(date.getHours());
+        const minutes = pad(date.getMinutes());
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
 
     return (
-        <form onSubmit={handleSubmit} className={editorClasses}>
-             <div className={`flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-2 ${isFullscreen ? 'p-4' : ''}`}>
-                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md space-y-6">
+            <div className="flex justify-between items-center">
+                 <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">
                     {post ? 'Edit Post' : 'Create New Post'}
                 </h2>
-                {isFullscreen && (
-                     <div className="flex justify-end gap-4">
-                        <button type="button" onClick={onCancel} className="px-4 py-2 bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold rounded-md hover:bg-slate-300 dark:hover:bg-slate-500">
-                            Cancel
-                        </button>
-                        <button type="submit" className="px-4 py-2 bg-teal-600 text-white font-semibold rounded-md hover:bg-teal-700">
-                            Save Post
-                        </button>
-                    </div>
-                )}
-            </div>
-            
-            <div className={`flex-grow flex flex-col md:flex-row gap-6 overflow-auto ${isFullscreen ? 'p-4' : ''}`}>
-                {/* Main Content Area */}
-                <div className="flex-grow flex flex-col md:grid md:grid-cols-2 gap-4">
-                     {/* Editor */}
-                    <div className="flex flex-col">
-                        <div className="flex items-center flex-wrap gap-1 p-2 bg-slate-100 dark:bg-slate-900/50 border-b border-slate-300 dark:border-slate-700 rounded-t-md">
-                            <button type="button" onClick={() => insertMarkdown('## ', '', 'Heading 2')} title="H2" className="p-2 w-8 rounded hover:bg-slate-200 dark:hover:bg-slate-700 font-bold">H2</button>
-                            <button type="button" onClick={() => insertMarkdown('### ', '', 'Heading 3')} title="H3" className="p-2 w-8 rounded hover:bg-slate-200 dark:hover:bg-slate-700 font-bold">H3</button>
-                            <div className="w-px h-6 bg-slate-300 dark:bg-slate-600 mx-1"></div>
-                            <button type="button" onClick={() => insertMarkdown('**', '**')} title="Bold" className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-700"><BoldIcon className="w-4 h-4" /></button>
-                            <button type="button" onClick={() => insertMarkdown('*', '*')} title="Italic" className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-700"><ItalicIcon className="w-4 h-4" /></button>
-                            <div className="w-px h-6 bg-slate-300 dark:bg-slate-600 mx-1"></div>
-                            <button type="button" onClick={() => insertMarkdown('[', '](url)', 'link text')} title="Link" className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-700"><LinkIcon className="w-4 h-4" /></button>
-                            <button type="button" onClick={() => insertMarkdown('> ', '', 'quote')} title="Blockquote" className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-700"><QuoteIcon className="w-4 h-4" /></button>
-                             <button type="button" onClick={() => insertMarkdown('* ', '', 'list item')} title="Unordered List" className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-700"><ListUnorderedIcon className="w-4 h-4" /></button>
-                             <div className="relative">
-                                <button type="button" onClick={() => colorPickerRef.current?.click()} title="Text Color" className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-700"><PaletteIcon className="w-4 h-4" /></button>
-                                <input ref={colorPickerRef} type="color" className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => insertMarkdown(`<span style="color: ${e.target.value};">`, '</span>')} />
-                             </div>
-                            <label htmlFor="content-image-upload" title="Upload Image" className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"><PhotoIcon className="w-4 h-4" /></label>
-                            <input type="file" id="content-image-upload" accept="image/*" className="hidden" onChange={handleContentImageUpload} />
-                             <div className="flex-grow"></div>
-                             <button type="button" onClick={() => setIsFullscreen(!isFullscreen)} title={isFullscreen ? "Exit fullscreen" : "Fullscreen"} className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-700">
-                                {isFullscreen ? <ArrowsPointingInIcon className="w-4 h-4" /> : <ArrowsPointingOutIcon className="w-4 h-4" />}
-                            </button>
-                        </div>
-                        <textarea id="content" name="content" ref={contentRef} value={formData.content} onChange={handleChange} className="flex-grow w-full px-3 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-b-md focus:ring-2 focus:ring-teal-500 focus:outline-none" />
-                    </div>
-                     {/* Preview */}
-                    <div className="flex-col h-full hidden md:flex">
-                        <div className="p-2 bg-slate-100 dark:bg-slate-900/50 border-b border-slate-300 dark:border-slate-700 rounded-t-md text-sm font-semibold text-slate-600 dark:text-slate-300">Preview</div>
-                        <div
-                            className="prose dark:prose-invert max-w-none flex-grow p-3 bg-slate-50 dark:bg-slate-700/50 border border-slate-300 dark:border-slate-600 rounded-b-md overflow-auto"
-                            dangerouslySetInnerHTML={{ __html: previewContent }}
-                        />
-                    </div>
-                </div>
-
-                {/* Side Panel */}
-                <div className={`space-y-6 ${isFullscreen ? 'w-full md:w-80 flex-shrink-0' : 'w-full md:w-1/3'}`}>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">Editor Mode</label>
-                        <div className="flex rounded-md shadow-sm">
-                             <button type="button" onClick={() => setFormData(p => ({...p, editorMode: 'markdown'}))} className={`relative inline-flex items-center px-4 py-2 rounded-l-md border border-slate-300 dark:border-slate-600 text-sm font-medium ${formData.editorMode === 'markdown' ? 'bg-teal-500 text-white z-10' : 'bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600'}`}>
-                                <MarkdownIcon className="w-5 h-5 mr-2" /> Markdown
-                             </button>
-                             <button type="button" onClick={() => setFormData(p => ({...p, editorMode: 'html'}))} className={`-ml-px relative inline-flex items-center px-4 py-2 rounded-r-md border border-slate-300 dark:border-slate-600 text-sm font-medium ${formData.editorMode === 'html' ? 'bg-teal-500 text-white z-10' : 'bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600'}`}>
-                                <CodeBracketIcon className="w-5 h-5 mr-2" /> HTML
-                             </button>
-                        </div>
-                    </div>
-                    <div>
-                        <label htmlFor="title" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Title</label>
-                        <input type="text" id="title" name="title" value={formData.title} onChange={handleTitleChange} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" required />
-                    </div>
-                    <div>
-                        <label htmlFor="slug" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Slug</label>
-                        <input type="text" id="slug" name="slug" value={formData.slug} onChange={handleChange} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" />
-                    </div>
-                     <div>
-                        <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Featured Image</label>
-                        <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 dark:border-slate-600 border-dashed rounded-md">
-                            <div className="space-y-1 text-center">
-                                {formData.featuredImageUrl ? (
-                                    <div>
-                                        <img src={formData.featuredImageUrl} alt="Featured preview" className="mx-auto h-24 w-auto rounded-md" />
-                                        <button type="button" onClick={() => setFormData(p => ({...p, featuredImageUrl: ''}))} className="mt-2 text-xs text-red-500 hover:underline">Remove Image</button>
-                                    </div>
-                                ) : (
-                                    <PhotoIcon className="mx-auto h-12 w-12 text-slate-400" />
-                                )}
-                                <div className="flex text-sm text-slate-600 dark:text-slate-400">
-                                    <label htmlFor="featured-image-upload" className="relative cursor-pointer bg-white dark:bg-slate-800 rounded-md font-medium text-teal-600 dark:text-teal-400 hover:text-teal-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-teal-500">
-                                        <span>Upload a file</span>
-                                        <input id="featured-image-upload" name="featured-image-upload" type="file" className="sr-only" accept="image/*" onChange={handleFeaturedImageUpload} />
-                                    </label>
-                                    <p className="pl-1">or drag and drop</p>
-                                </div>
-                                <p className="text-xs text-slate-500 dark:text-slate-500">PNG, JPG, GIF up to 10MB</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <label htmlFor="excerpt" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Excerpt</label>
-                        <textarea id="excerpt" name="excerpt" value={formData.excerpt} onChange={handleChange} rows={4} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" />
-                    </div>
-                     <div>
-                        <label htmlFor="publishedAt" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Publish Date</label>
-                        <input type="date" id="publishedAt" name="publishedAt" value={formData.publishedAt} onChange={handleChange} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" />
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="isPublished" checked={formData.isPublished} onChange={handleChange} className="sr-only peer" />
-                        <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-500 peer-checked:bg-teal-600"></div>
-                        <span className="ml-3 text-sm font-medium text-slate-700 dark:text-slate-300">{formData.isPublished ? 'Published' : 'Draft'}</span>
-                    </label>
-                </div>
-            </div>
-            
-             {!isFullscreen && (
-                <div className="flex justify-end gap-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <div className="flex items-center gap-4">
                     <button type="button" onClick={onCancel} className="px-4 py-2 bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold rounded-md hover:bg-slate-300 dark:hover:bg-slate-500">
                         Cancel
                     </button>
-                    <button type="submit" className="px-4 py-2 bg-teal-600 text-white font-semibold rounded-md hover:bg-teal-700">
+                    <button type="submit" className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white font-semibold rounded-md hover:bg-teal-700">
+                        <SaveIcon className="w-5 h-5" />
                         Save Post
                     </button>
                 </div>
-            )}
+            </div>
+            
+            {/* Main Content */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-4">
+                    <div>
+                        <input type="text" id="title" name="title" value={formData.title} onChange={handleChange} required className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-teal-500 rounded-md focus:ring-0 focus:outline-none text-2xl font-extrabold" placeholder="Post Title" />
+                    </div>
+
+                    <div className="flex items-center gap-2 p-2 bg-slate-100 dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-700">
+                         <button type="button" onClick={() => handleMarkdownAction('h2')} title="Heading 2" className="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700"><span className="font-bold text-sm">H2</span></button>
+                         <button type="button" onClick={() => handleMarkdownAction('h3')} title="Heading 3" className="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700"><span className="font-bold text-sm">H3</span></button>
+                         <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1"></div>
+                        <button type="button" onClick={() => handleMarkdownAction('bold')} title="Bold" className="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700"><BoldIcon className="w-5 h-5" /></button>
+                        <button type="button" onClick={() => handleMarkdownAction('italic')} title="Italic" className="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700"><ItalicIcon className="w-5 h-5" /></button>
+                         <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1"></div>
+                        <button type="button" onClick={() => handleMarkdownAction('link')} title="Link" className="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700"><LinkIcon className="w-5 h-5" /></button>
+                        <button type="button" onClick={() => handleMarkdownAction('quote')} title="Blockquote" className="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700"><QuoteIcon className="w-5 h-5" /></button>
+                        <button type="button" onClick={() => handleMarkdownAction('ul')} title="Unordered List" className="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700"><ListUnorderedIcon className="w-5 h-5" /></button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[60vh] min-h-[500px]">
+                        <textarea
+                            ref={contentRef}
+                            id="content"
+                            name="content"
+                            value={formData.content}
+                            onChange={handleChange}
+                            required
+                            className="w-full h-full resize-none p-3 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono text-sm"
+                            placeholder="Start writing your masterpiece in Markdown..."
+                        />
+                        <div className="h-full overflow-y-auto p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md">
+                            <div
+                                className="prose dark:prose-invert max-w-none"
+                                dangerouslySetInnerHTML={{ __html: parseMarkdown(formData.content) }}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Sidebar */}
+                <div className="space-y-4">
+                     <Accordion title="Publish Settings" defaultOpen={true}>
+                         <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm font-medium text-slate-600 dark:text-slate-300">Status</label>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="isPublished" checked={formData.isPublished} onChange={handleChange} className="sr-only peer" />
+                                    <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-500 peer-checked:bg-teal-600"></div>
+                                    <span className="ml-3 text-sm font-medium text-slate-700 dark:text-slate-300">{formData.isPublished ? 'Published' : 'Draft'}</span>
+                                </label>
+                            </div>
+                            <div>
+                                <label htmlFor="publishedAt" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Publish Date</label>
+                                <input type="datetime-local" id="publishedAt" name="publishedAt" value={dateForInput(formData.publishedAt)} onChange={handleChange} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" />
+                            </div>
+                             <div>
+                                <label htmlFor="slug" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">URL Slug</label>
+                                <input type="text" id="slug" name="slug" value={formData.slug} onChange={handleChange} required className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono text-sm" />
+                            </div>
+                         </div>
+                     </Accordion>
+
+                     <Accordion title="Tags">
+                        <TagInput tags={formData.tags || []} setTags={handleTagsChange} />
+                     </Accordion>
+
+                    <Accordion title="Featured Image">
+                         <div className="space-y-2">
+                             <label htmlFor="featuredImageUrl" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Image URL</label>
+                             <input type="url" id="featuredImageUrl" name="featuredImageUrl" value={formData.featuredImageUrl} onChange={handleChange} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="https://..."/>
+                             {formData.featuredImageUrl && (
+                                <img src={formData.featuredImageUrl} alt="Preview" className="w-full h-auto rounded-md mt-2 border border-slate-200 dark:border-slate-700" onError={(e) => (e.currentTarget.style.display = 'none')} onLoad={(e) => (e.currentTarget.style.display = 'block')} />
+                             )}
+                         </div>
+                    </Accordion>
+                     
+                    <Accordion title="Excerpt">
+                        <textarea id="excerpt" name="excerpt" value={formData.excerpt} onChange={handleChange} rows={4} required className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" />
+                    </Accordion>
+
+                     <Accordion title="SEO & Social">
+                         <div className="space-y-4">
+                             <div>
+                                <label htmlFor="metaTitle" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Meta Title</label>
+                                <input type="text" id="metaTitle" name="metaTitle" value={formData.metaTitle} onChange={handleChange} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Defaults to post title" />
+                                <p className="text-xs text-slate-500 mt-1 text-right">{formData.metaTitle?.length || 0} / 60</p>
+                            </div>
+                            <div>
+                                <label htmlFor="metaDescription" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Meta Description</label>
+                                <textarea id="metaDescription" name="metaDescription" value={formData.metaDescription} onChange={handleChange} rows={3} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Defaults to excerpt" />
+                                <p className="text-xs text-slate-500 mt-1 text-right">{formData.metaDescription?.length || 0} / 160</p>
+                            </div>
+                             <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-300 pt-2 border-t border-slate-200 dark:border-slate-700">Search Result Preview</h4>
+                             <SERPPreview title={formData.metaTitle || formData.title} description={formData.metaDescription || formData.excerpt} slug={formData.slug} />
+                         </div>
+                     </Accordion>
+                </div>
+            </div>
         </form>
     );
 };

@@ -1,17 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-// FIX: Add .ts extension for module resolution
-import type { PhoneNumber, SMSMessage, Settings } from '../types.ts';
-import { getMessages, getNumberByValue } from '../services/smsService.ts';
-// FIX: Add .ts extension for module resolution
-import { getSettings } from '../services/settingsService.ts';
-import { updateMetadata } from '../services/seoService.ts';
-import Header from '../components/Header.tsx';
-import MessageCard from '../components/MessageCard.tsx';
-import Footer from '../components/Footer.tsx';
-import AdsenseAd from '../components/AdsenseAd.tsx';
-import { RefreshIcon } from '../components/icons/RefreshIcon.tsx';
-import { ChevronLeftIcon } from '../components/icons/ChevronLeftIcon.tsx';
-import { CopyIcon } from '../components/icons/CopyIcon.tsx';
+import type { PhoneNumber, SMSMessage, Settings } from '../types';
+import { getMessages, getNumberByValue } from '../services/smsService';
+import { getSettings } from '../services/settingsService';
+import { updateMetadata } from '../services/seoService';
+import Header from '../components/Header';
+import MessageCard from '../components/MessageCard';
+import Footer from '../components/Footer';
+import AdsenseAd from '../components/AdsenseAd';
+import { RefreshIcon } from '../components/icons/RefreshIcon';
+import { ChevronLeftIcon } from '../components/icons/ChevronLeftIcon';
+import { CopyIcon } from '../components/icons/CopyIcon';
 
 interface NumberPageProps {
   phoneNumber: string;
