@@ -8,6 +8,7 @@ import PhoneNumberCard from '../components/PhoneNumberCard';
 import Footer from '../components/Footer';
 import AdsenseAd from '../components/AdsenseAd';
 import BlogSection from '../components/BlogSection';
+import { SearchIcon } from '../components/icons/SearchIcon';
 
 const HomePage: React.FC = () => {
   const [settings, setSettings] = useState<Settings>(getSettings());
@@ -16,6 +17,7 @@ const HomePage: React.FC = () => {
   const [numbers, setNumbers] = useState<PhoneNumber[]>(initialNumbers);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(initialNumbers.length === 0);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     updateMetadata({
@@ -90,8 +92,27 @@ const HomePage: React.FC = () => {
             </div>
         );
     }
+    
+    const filteredNumbers = numbers.filter(number => {
+        const query = searchQuery.toLowerCase().trim();
+        if (!query) return true;
+        const numberString = number.number.replace(/[\s+\-()]/g, '');
+        const queryString = query.replace(/[\s+\-()]/g, '');
+        return (
+            numberString.includes(queryString) ||
+            number.country.toLowerCase().includes(query)
+        );
+    });
 
-    if (numbers.length === 0) {
+    if (numbers.length > 0 && filteredNumbers.length === 0) {
+        return (
+            <p className="md:col-span-2 xl:col-span-3 text-center text-slate-500 dark:text-slate-400 p-10">
+                No numbers found matching "{searchQuery}".
+            </p>
+        );
+    }
+
+    if (filteredNumbers.length === 0) {
         return (
             <p className="md:col-span-2 xl:col-span-3 text-center text-slate-500 dark:text-slate-400 p-10">
                 No enabled phone numbers found. Please check the Admin Panel.
@@ -100,7 +121,7 @@ const HomePage: React.FC = () => {
     }
 
     const itemsToRender: React.ReactNode[] = [];
-    numbers.forEach((number, index) => {
+    filteredNumbers.forEach((number, index) => {
         itemsToRender.push(<PhoneNumberCard number={number} key={number.id} />);
         
         // Insert an ad after the 3rd number, making it span the full grid width
@@ -130,6 +151,21 @@ const HomePage: React.FC = () => {
             <p className="mt-4 max-w-2xl mx-auto text-lg text-slate-500 dark:text-slate-400">
                 {settings.description}
             </p>
+        </div>
+        <div className="mb-8 max-w-2xl mx-auto">
+            <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <SearchIcon className="w-5 h-5 text-slate-400" />
+                </div>
+                <input
+                    type="search"
+                    placeholder="Search by country or number..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 rounded-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-teal-500 focus:outline-none shadow-sm transition-colors"
+                    aria-label="Search phone numbers"
+                />
+            </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {renderNumberList()}

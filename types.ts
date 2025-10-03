@@ -44,10 +44,21 @@ export interface BlogPost {
   metaDescription?: string;
 }
 
+export interface CustomPage {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  isPublished: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  metaTitle?: string;
+  metaDescription?: string;
+}
+
 export interface Settings {
     title: string;
     description: string;
-    theme: 'light' | 'dark';
     footerText: string;
     footerLinks: FooterLink[];
     aboutPageContent: string;
@@ -70,4 +81,5 @@ export interface Settings {
     adminPassword: string;
     publicNumbers: PhoneNumber[];
     posts: BlogPost[];
+    customPages: CustomPage[];
 }

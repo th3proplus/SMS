@@ -5,6 +5,7 @@ import type { Settings, BlogPost } from '../types';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { ArrowRightIcon } from '../components/icons/ArrowRightIcon';
+import { SearchIcon } from '../components/icons/SearchIcon';
 
 const BlogCard: React.FC<{ post: BlogPost }> = ({ post }) => (
     <a href={`/blog/${post.slug}`} className="group flex flex-col bg-white dark:bg-slate-800 rounded-xl shadow-md hover:shadow-lg dark:hover:shadow-teal-900/30 border border-slate-200 dark:border-slate-700 transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
@@ -32,6 +33,7 @@ const BlogCard: React.FC<{ post: BlogPost }> = ({ post }) => (
 
 const BlogIndexPage: React.FC = () => {
     const [settings, setSettings] = useState<Settings>(getSettings());
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         const handleSettingsChange = () => {
@@ -52,6 +54,16 @@ const BlogIndexPage: React.FC = () => {
     const publishedPosts = settings.posts
         .filter(p => p.isPublished)
         .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+        
+    const filteredPosts = publishedPosts.filter(post => {
+        const query = searchQuery.toLowerCase().trim();
+        if (!query) return true;
+        const titleMatch = post.title.toLowerCase().includes(query);
+        const excerptMatch = post.excerpt.toLowerCase().includes(query);
+        // Also search the content, removing HTML tags for a better match
+        const contentMatch = post.content.replace(/<[^>]*>?/gm, '').toLowerCase().includes(query);
+        return titleMatch || excerptMatch || contentMatch;
+    });
 
     return (
         <div className="flex flex-col min-h-screen">
@@ -65,13 +77,38 @@ const BlogIndexPage: React.FC = () => {
                         Stay updated with our latest articles, news, and privacy tips.
                     </p>
                 </div>
+                
+                <div className="mb-10 max-w-2xl mx-auto">
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <SearchIcon className="w-5 h-5 text-slate-400" />
+                        </div>
+                        <input
+                            type="search"
+                            placeholder="Search articles by title or content..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-12 pr-4 py-3 rounded-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-teal-500 focus:outline-none shadow-sm transition-colors"
+                            aria-label="Search articles"
+                        />
+                    </div>
+                </div>
 
                 {publishedPosts.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {publishedPosts.map(post => (
-                            <BlogCard key={post.id} post={post} />
-                        ))}
-                    </div>
+                    filteredPosts.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {filteredPosts.map(post => (
+                                <BlogCard key={post.id} post={post} />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-16">
+                            <h2 className="text-2xl font-semibold text-slate-700 dark:text-slate-300">No Results Found</h2>
+                            <p className="text-slate-500 dark:text-slate-400 mt-2">
+                                We couldn't find any articles matching "{searchQuery}". Try a different search.
+                            </p>
+                        </div>
+                    )
                 ) : (
                     <div className="text-center py-16">
                         <h2 className="text-2xl font-semibold text-slate-700 dark:text-slate-300">No Posts Yet</h2>

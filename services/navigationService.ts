@@ -1,30 +1,23 @@
+
 export const navigate = (path: string, options: { replace?: boolean } = {}): void => {
-  // Use the current document's location as the base for resolving the path.
-  const targetUrl = new URL(path, window.location.href);
-  
-  // The History API requires the new URL to be of the same origin.
-  if (targetUrl.origin !== window.location.origin) {
-    console.warn(
-      `navigate() was called with a cross-origin URL: ${path}. Navigation was blocked.`
-    );
-    return;
-  }
+    // Ensure path starts with a slash and create the hash format, e.g., #/path
+    const newHash = `#${path.startsWith('/') ? path : '/' + path}`;
 
-  const relativePath = targetUrl.pathname + targetUrl.search + targetUrl.hash;
-  const currentPath = window.location.pathname + window.location.search + window.location.hash;
-  
-  // Do nothing if the path is the same, unless we are explicitly trying to replace the history entry.
-  if (!options.replace && currentPath === relativePath) {
-    return;
-  }
+    // Avoid pushing a new history state if the hash is already what we want.
+    if (window.location.hash === newHash && !options.replace) {
+        return;
+    }
 
-  // Use replaceState or pushState based on the 'replace' option.
-  if (options.replace) {
-      window.history.replaceState({}, '', relativePath);
-  } else {
-      window.history.pushState({}, '', relativePath);
-  }
-
-  // Dispatch a 'popstate' event to notify the application (e.g., App.tsx) that the URL has changed.
-  window.dispatchEvent(new PopStateEvent('popstate'));
+    if (options.replace) {
+        // Use location.replace to change the URL without adding to history.
+        // This is safer than history.replaceState in blob environments as it correctly
+        // handles the full URL. It replaces the current history entry.
+        const baseUrl = window.location.href.split('#')[0];
+        const newUrl = baseUrl + newHash;
+        window.location.replace(newUrl);
+    } else {
+        // Setting location.hash automatically adds an entry to the browser history
+        // and triggers the 'hashchange' event, which our App component listens for.
+        window.location.hash = newHash;
+    }
 };

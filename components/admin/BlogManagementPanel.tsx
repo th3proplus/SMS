@@ -54,7 +54,7 @@ const BlogManagementPanel: React.FC = () => {
     const sortedPosts = [...settings.posts].sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
 
     if (view === 'editor') {
-        return <BlogPostEditor post={currentPost} onSave={handleSave} onCancel={handleCancel} />;
+        return <BlogPostEditor key={currentPost?.id || 'new'} post={currentPost} onSave={handleSave} onCancel={handleCancel} />;
     }
 
     return (

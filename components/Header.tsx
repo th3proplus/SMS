@@ -3,6 +3,7 @@ import type { FooterLink } from '../types';
 import { AdminIcon } from './icons/AdminIcon';
 import { MenuIcon } from './icons/MenuIcon';
 import { XIcon } from './icons/XIcon';
+import { isAuthenticated } from '../services/authService';
 
 interface HeaderProps {
     title: string;
@@ -12,6 +13,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ title, links = [], showAdminLink = false }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const isLoggedIn = isAuthenticated();
 
   return (
     <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-20">
@@ -38,7 +40,7 @@ const Header: React.FC<HeaderProps> = ({ title, links = [], showAdminLink = fals
                     ))}
                     {showAdminLink && (
                         <a
-                            href="/login"
+                            href={isLoggedIn ? "/admin" : "/login"}
                             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
                             aria-label="Admin Panel"
                             title="Admin Panel"
@@ -76,7 +78,7 @@ const Header: React.FC<HeaderProps> = ({ title, links = [], showAdminLink = fals
                 ))}
                 {showAdminLink && (
                     <a
-                        href="/login"
+                        href={isLoggedIn ? "/admin" : "/login"}
                         className="flex items-center gap-3 px-3 py-2 rounded-md text-base font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-teal-600 dark:hover:text-teal-400"
                     >
                         <AdminIcon className="w-5 h-5" />

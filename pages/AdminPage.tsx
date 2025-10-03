@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { logout, updateCredentials } from '../services/authService';
-import { getSettings, saveSettings, applyTheme } from '../services/settingsService';
+import { getSettings, saveSettings } from '../services/settingsService';
 import { getOwnedNumbers, getWebhookLogs, demoNumbers } from '../services/twilioService';
 import { getOwnedNumbers as getSignalWireNumbers } from '../services/signalwireService';
 import { navigate } from '../services/navigationService';
@@ -24,6 +24,8 @@ import { CopyIcon } from '../components/icons/CopyIcon';
 import { GripVerticalIcon } from '../components/icons/GripVerticalIcon';
 import { NewspaperIcon } from '../components/icons/NewspaperIcon';
 import BlogManagementPanel from '../components/admin/BlogManagementPanel';
+import { DocumentPlusIcon } from '../components/icons/DocumentPlusIcon';
+import CustomPageManagementPanel from '../components/admin/CustomPageManagementPanel';
 
 
 interface TabButtonProps {
@@ -39,7 +41,7 @@ const TabButton: React.FC<TabButtonProps> = ({ icon, label, tabName, activeTab, 
     return (
         <button
             onClick={() => setActiveTab(tabName)}
-            className={`w-full flex items-center gap-3 p-3 rounded-md text-left transition-colors ${
+            className={`flex-shrink-0 md:w-full flex items-center justify-center md:justify-start gap-3 p-3 rounded-md md:text-left transition-colors ${
                 isActive
                     ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 font-semibold'
                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -137,7 +139,6 @@ async function handleRequest(request) {
     const handleSave = () => {
         setIsSaving(true);
         saveSettings(settings);
-        applyTheme(settings.theme);
         setTimeout(() => setIsSaving(false), 1000); 
     };
     
@@ -156,13 +157,6 @@ async function handleRequest(request) {
                     <div>
                         <label htmlFor="description" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Site Description</label>
                         <textarea id="description" name="description" value={settings.description} onChange={handleChange} rows={3} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" />
-                    </div>
-                     <div>
-                        <label htmlFor="theme" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Theme</label>
-                        <select id="theme" name="theme" value={settings.theme} onChange={handleChange} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none">
-                            <option value="light">Light</option>
-                            <option value="dark">Dark</option>
-                        </select>
                     </div>
                      <div>
                         <label htmlFor="headCode" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Custom Head Code</label>
@@ -754,10 +748,10 @@ const PagesPanel: React.FC = () => {
                         <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Footer Links</label>
                         <div className="space-y-2">
                             {settings.footerLinks.map((link, index) => (
-                                <div key={index} className="flex items-center gap-2">
+                                <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                                     <input type="text" placeholder="Link Text" value={link.text} onChange={e => handleLinkChange(index, 'text', e.target.value)} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" />
                                     <input type="text" placeholder="URL (e.g., /about)" value={link.url} onChange={e => handleLinkChange(index, 'url', e.target.value)} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" />
-                                    <button onClick={() => removeLink(index)} className="p-2 text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400 rounded-full hover:bg-red-500/10 transition-colors" title="Remove Link">
+                                    <button onClick={() => removeLink(index)} className="p-2 text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400 rounded-full hover:bg-red-500/10 transition-colors self-end sm:self-center flex-shrink-0" title="Remove Link">
                                         <TrashIcon className="w-5 h-5" />
                                     </button>
                                 </div>
@@ -914,11 +908,9 @@ const SecurityPanel: React.FC = () => {
         }
         
         setIsSaving(true);
-        const currentSettings = getSettings();
-        const newUsername = credentials.username.trim() || currentSettings.adminUsername;
-        const newPassword = credentials.password || currentSettings.adminPassword;
-
-        await updateCredentials(newUsername, newPassword);
+        // The service now handles preserving the password if the input is empty.
+        // We just pass the values from the form.
+        await updateCredentials(credentials.username.trim(), credentials.password);
         
         setTimeout(() => {
             setIsSaving(false);
@@ -974,6 +966,8 @@ const AdminPage: React.FC = () => {
                 return <NumbersPanel />;
             case 'blog':
                 return <BlogManagementPanel />;
+            case 'customPages':
+                return <CustomPageManagementPanel />;
             case 'webhooks':
                 return <WebhookLogsPanel />;
             case 'pages':
@@ -998,14 +992,14 @@ const AdminPage: React.FC = () => {
                         </h1>
                     </div>
                     <div className="flex items-center gap-2 sm:gap-4">
-                         <a
-                            href="/"
+                         <button
+                            onClick={() => navigate('/')}
                             className="flex items-center gap-2 p-2 rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-teal-500 dark:hover:text-teal-400 transition-colors"
                             title="View Public Site"
                         >
                             <EyeIcon className="w-5 h-5" />
                             <span className="text-sm font-medium hidden sm:inline">Public Site</span>
-                        </a>
+                        </button>
                         <button
                             onClick={handleLogout}
                             className="flex items-center gap-2 p-2 rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-red-500 dark:hover:text-red-400 transition-colors"
@@ -1021,10 +1015,11 @@ const AdminPage: React.FC = () => {
             <main className="container mx-auto p-4 md:p-6">
                 <div className="flex flex-col md:flex-row gap-6">
                     <aside className="md:w-1/4 lg:w-1/5 flex-shrink-0">
-                        <nav className="flex flex-row md:flex-col gap-2 bg-white dark:bg-slate-800 p-3 rounded-lg shadow-md">
+                        <nav className="flex flex-row md:flex-col gap-2 bg-white dark:bg-slate-800 p-3 rounded-lg shadow-md overflow-x-auto md:overflow-y-auto">
                             <TabButton icon={<SettingsIcon className="w-5 h-5" />} label="General Settings" tabName="settings" activeTab={activeTab} setActiveTab={setActiveTab} />
                             <TabButton icon={<PhoneIcon className="w-5 h-5" />} label="Phone Numbers" tabName="numbers" activeTab={activeTab} setActiveTab={setActiveTab} />
                             <TabButton icon={<NewspaperIcon className="w-5 h-5" />} label="Blog" tabName="blog" activeTab={activeTab} setActiveTab={setActiveTab} />
+                            <TabButton icon={<DocumentPlusIcon className="w-5 h-5" />} label="Custom Pages" tabName="customPages" activeTab={activeTab} setActiveTab={setActiveTab} />
                             <TabButton icon={<WebhookIcon className="w-5 h-5" />} label="Webhook Logs" tabName="webhooks" activeTab={activeTab} setActiveTab={setActiveTab} />
                             <TabButton icon={<DocumentIcon className="w-5 h-5" />} label="Pages & Footer" tabName="pages" activeTab={activeTab} setActiveTab={setActiveTab} />
                             <TabButton icon={<DollarIcon className="w-5 h-5" />} label="Advertising" tabName="advertising" activeTab={activeTab} setActiveTab={setActiveTab} />

@@ -5,7 +5,6 @@ const SETTINGS_KEY = 'sms_receiver_settings';
 const defaultSettings: Settings = {
     title: 'Free SMS Receiver',
     description: 'Receive SMS online for free. Select a number to get started.',
-    theme: 'dark',
     footerText: `© ${new Date().getFullYear()} Free SMS Receiver. All rights reserved.`,
     footerLinks: [
         { text: 'Blog', url: '/blog' },
@@ -98,7 +97,8 @@ const defaultSettings: Settings = {
             metaTitle: 'Top 5 Reasons for a Free SMS Receiver',
             metaDescription: 'Explore the top benefits of using a free SMS receiving service, from online verification to enhanced privacy and security.'
         }
-    ]
+    ],
+    customPages: [],
 };
 
 export const getSettings = (): Settings => {
@@ -123,6 +123,14 @@ export const getSettings = (): Settings => {
                 }));
             }
 
+            if (parsed.customPages && Array.isArray(parsed.customPages)) {
+                parsed.customPages = parsed.customPages.map((page: any) => ({
+                    ...page,
+                    createdAt: new Date(page.createdAt),
+                    updatedAt: new Date(page.updatedAt),
+                }));
+            }
+
             const mergedSettings = { 
                 ...defaultSettings, 
                 ...parsed
@@ -135,6 +143,7 @@ export const getSettings = (): Settings => {
             mergedSettings.footerLinks = parsed.footerLinks || defaultSettings.footerLinks;
             mergedSettings.publicNumbers = parsed.publicNumbers || defaultSettings.publicNumbers;
             mergedSettings.posts = parsed.posts || defaultSettings.posts;
+            mergedSettings.customPages = parsed.customPages || defaultSettings.customPages;
 
             return mergedSettings;
         }
@@ -150,14 +159,5 @@ export const saveSettings = (settings: Settings): void => {
         window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
         console.error("Failed to save settings to localStorage", error);
-    }
-};
-
-export const applyTheme = (theme: 'light' | 'dark'): void => {
-    const root = document.documentElement;
-    if (theme === 'light') {
-        root.classList.remove('dark');
-    } else {
-        root.classList.add('dark');
     }
 };

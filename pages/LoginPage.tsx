@@ -73,21 +73,21 @@ const LoginPage: React.FC = () => {
                             placeholder="password"
                         />
                     </div>
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                            <input
-                                id="remember-me"
-                                name="remember-me"
-                                type="checkbox"
-                                checked={rememberMe}
-                                onChange={(e) => setRememberMe(e.target.checked)}
-                                className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-slate-500 rounded bg-slate-700"
-                            />
-                            <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-400">
-                                Remember this device for 30 days
-                            </label>
-                        </div>
+                    
+                    <div className="flex items-center">
+                        <input
+                            id="remember-me"
+                            name="remember-me"
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                            className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-slate-600 bg-slate-700 rounded"
+                        />
+                        <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-300">
+                            Remember me
+                        </label>
                     </div>
+                    
                     {error && <p className="text-sm text-red-400 text-center">{error}</p>}
                     <div>
                         <button

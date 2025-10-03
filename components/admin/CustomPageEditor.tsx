@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { BlogPost } from '../../types';
+import type { CustomPage } from '../../types';
 import { slugify } from '../../utils/string';
-import { parseMarkdown } from '../../utils/markdown';
 import { SaveIcon } from '../icons/SaveIcon';
 import { ChevronDownIcon } from '../icons/ChevronDownIcon';
 import { BoldIcon } from '../icons/BoldIcon';
@@ -9,12 +8,12 @@ import { ItalicIcon } from '../icons/ItalicIcon';
 import { LinkIcon } from '../icons/LinkIcon';
 import { QuoteIcon } from '../icons/QuoteIcon';
 import { ListUnorderedIcon } from '../icons/ListUnorderedIcon';
-import { XIcon } from '../icons/XIcon';
 import { ImageIcon } from '../icons/ImageIcon';
 import { UnderlineIcon } from '../icons/UnderlineIcon';
 import { StrikethroughIcon } from '../icons/StrikethroughIcon';
 import { ListOrderedIcon } from '../icons/ListOrderedIcon';
 import { TextColorIcon } from '../icons/TextColorIcon';
+import { parseMarkdown } from '../../utils/markdown';
 
 interface AccordionProps {
     title: string;
@@ -44,51 +43,9 @@ const SERPPreview: React.FC<{ title: string; description: string; slug: string }
     const siteUrl = window.location.origin;
     return (
         <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-md">
-            <p className="text-sm text-blue-800 dark:text-blue-400 truncate group-hover:underline">{title || "Your Post Title Will Appear Here"}</p>
-            <p className="text-xs text-green-700 dark:text-green-500">{`${siteUrl}/#${`/blog/${slug || 'your-post-slug'}`}`}</p>
+            <p className="text-sm text-blue-800 dark:text-blue-400 truncate group-hover:underline">{title || "Your Page Title Will Appear Here"}</p>
+            <p className="text-xs text-green-700 dark:text-green-500">{`${siteUrl}/#${`/pages/${slug || 'your-page-slug'}`}`}</p>
             <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">{description || "Your meta description will appear here. Keep it concise and engaging to attract readers."}</p>
-        </div>
-    );
-};
-
-const TagInput: React.FC<{ tags: string[]; setTags: (tags: string[]) => void }> = ({ tags, setTags }) => {
-    const [inputValue, setInputValue] = useState('');
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter' || e.key === ',') {
-            e.preventDefault();
-            const newTag = inputValue.trim();
-            if (newTag && !tags.includes(newTag)) {
-                setTags([...tags, newTag]);
-            }
-            setInputValue('');
-        }
-    };
-
-    const removeTag = (tagToRemove: string) => {
-        setTags(tags.filter(tag => tag !== tagToRemove));
-    };
-
-    return (
-        <div>
-            <div className="flex flex-wrap gap-2 mb-2">
-                {tags.map(tag => (
-                    <div key={tag} className="flex items-center gap-1 bg-teal-100 dark:bg-teal-900/50 text-teal-800 dark:text-teal-300 text-xs font-semibold px-2 py-1 rounded-full">
-                        <span>{tag}</span>
-                        <button type="button" onClick={() => removeTag(tag)} className="text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-200">
-                            <XIcon className="w-3 h-3" />
-                        </button>
-                    </div>
-                ))}
-            </div>
-            <input
-                type="text"
-                value={inputValue}
-                onChange={e => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none"
-                placeholder="Add tags (press Enter)"
-            />
         </div>
     );
 };
@@ -99,45 +56,44 @@ const ToolbarButton: React.FC<{ onMouseDown: (e: React.MouseEvent) => void, titl
     </button>
 );
 
-interface BlogPostEditorProps {
-    post: BlogPost | null;
-    onSave: (post: BlogPost) => void;
+interface CustomPageEditorProps {
+    page: CustomPage | null;
+    onSave: (page: CustomPage) => void;
     onCancel: () => void;
 }
 
 const isHtml = (str: string | null | undefined): str is string => !!str && /<[a-z][\s\S]*>/i.test(str);
 
-const createInitialState = (post: BlogPost | null): BlogPost => {
-    const EMPTY_CONTENT = '<p><br></p>';
+const createInitialState = (page: CustomPage | null): CustomPage => {
+    const EMPTY_CONTENT = '<p>Start writing your page content here...</p>';
 
-    if (post) {
-        let contentHtml = post.content || EMPTY_CONTENT;
+    if (page) {
+        let contentHtml = page.content || EMPTY_CONTENT;
         if (!isHtml(contentHtml)) {
             contentHtml = parseMarkdown(contentHtml) || EMPTY_CONTENT;
         }
-        return { ...post, content: contentHtml, tags: post.tags || [] };
+        return { ...page, content: contentHtml };
     }
 
+    const now = new Date();
     return {
         id: Date.now().toString(),
         title: '',
         slug: '',
-        content: '<p>Start writing your masterpiece...</p>',
-        excerpt: '',
-        featuredImageUrl: '',
+        content: EMPTY_CONTENT,
         isPublished: false,
-        publishedAt: new Date(),
-        tags: [],
+        createdAt: now,
+        updatedAt: now,
         metaTitle: '',
         metaDescription: '',
     };
 };
 
 
-const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel }) => {
-    const [formData, setFormData] = useState<BlogPost>(() => createInitialState(post));
+const CustomPageEditor: React.FC<CustomPageEditorProps> = ({ page, onSave, onCancel }) => {
+    const [formData, setFormData] = useState<CustomPage>(() => createInitialState(page));
     const [editorMode, setEditorMode] = useState<'visual' | 'html'>('visual');
-    const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(!!post?.slug);
+    const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(!!page?.slug);
     const editorRef = useRef<HTMLDivElement>(null);
     const imageContentUploadRef = useRef<HTMLInputElement>(null);
     const savedRange = useRef<Range | null>(null);
@@ -160,9 +116,7 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
         while (currentNode && currentNode !== editorRef.current) {
             const tagName = currentNode.tagName.toLowerCase();
             if (['p', 'h2', 'h3', 'blockquote', 'li', 'div'].includes(tagName)) {
-                // If it's a div inside the editor, it's likely the immediate parent.
                 if (tagName === 'div') return currentNode;
-                // For other block elements, return them.
                 return currentNode;
             }
             currentNode = currentNode.parentElement;
@@ -212,7 +166,6 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
             selection?.addRange(savedRange.current);
         } else if (editorRef.current) {
             editorRef.current.focus({ preventScroll: true });
-            // Create a range at the end if none exists
             const range = document.createRange();
             range.selectNodeContents(editorRef.current);
             range.collapse(false);
@@ -228,10 +181,10 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
         command();
         saveSelection();
         editorRef.current.focus();
-        setTimeout(updateToolbarState, 0); // DOM needs a moment to update
+        setTimeout(updateToolbarState, 0);
     }, [restoreSelection, saveSelection, updateToolbarState]);
 
-    useEffect(() => {
+     useEffect(() => {
         const editor = editorRef.current;
         if (!editor || editorMode !== 'visual') return;
 
@@ -265,10 +218,7 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
         } else if (name === 'slug') {
             setIsSlugManuallyEdited(true);
             setFormData(prev => ({ ...prev, slug: slugify(value) }));
-        } else if (name === 'publishedAt') {
-            setFormData(prev => ({ ...prev, publishedAt: new Date(value) }));
-        }
-        else {
+        } else {
             setFormData(prev => ({
                 ...prev,
                 [name]: type === 'checkbox' ? checked : value,
@@ -276,31 +226,6 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
         }
     };
     
-    const handleTagsChange = (newTags: string[]) => {
-        setFormData(prev => ({ ...prev, tags: newTags }));
-    };
-
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-    
-        if (file.size > 2 * 1024 * 1024) { // 2MB limit
-            alert("File is too large. Please upload an image under 2MB.");
-            return;
-        }
-    
-        const reader = new FileReader();
-        reader.onload = () => {
-            const result = reader.result as string;
-            setFormData(prev => ({
-                ...prev,
-                featuredImageUrl: result
-            }));
-        };
-        reader.readAsDataURL(file);
-        e.target.value = '';
-    };
-
     const handleEditorContentBlur = () => {
         if (editorRef.current) {
             const currentContent = editorRef.current.innerHTML;
@@ -313,7 +238,7 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
     const handleHtmlContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setFormData(prev => ({ ...prev, content: e.target.value }));
     };
-    
+
     const handleModeSwitch = (newMode: 'visual' | 'html') => {
         if (editorMode === newMode) return;
     
@@ -325,7 +250,7 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
         setEditorMode(newMode);
     };
 
-    useEffect(() => {
+     useEffect(() => {
         if (editorRef.current) {
             if (isInitialMount.current) {
                 editorRef.current.innerHTML = formData.content;
@@ -337,7 +262,6 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [editorMode]);
 
-    // Command handlers
     const handleBlockFormat = (e: React.MouseEvent, tag: 'p' | 'h2' | 'h3' | 'blockquote') => {
         e.preventDefault();
         executeCommandWithFocus(() => {
@@ -406,20 +330,15 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
         onSave({
             ...formData,
             content: finalContent,
+            updatedAt: new Date(),
         });
-    };
-
-    const dateForInput = (date: Date) => {
-        const d = new Date(date);
-        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-        return d.toISOString().slice(0, 16);
     };
 
     return (
         <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md space-y-6">
             <div className="flex justify-between items-center">
                  <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                    {post ? 'Edit Post' : 'Create New Post'}
+                    {page ? 'Edit Page' : 'Create New Page'}
                 </h2>
                 <div className="flex items-center gap-4">
                     <button type="button" onClick={onCancel} className="px-4 py-2 bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold rounded-md hover:bg-slate-300 dark:hover:bg-slate-500">
@@ -427,7 +346,7 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
                     </button>
                     <button type="submit" className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white font-semibold rounded-md hover:bg-teal-700">
                         <SaveIcon className="w-5 h-5" />
-                        Save Post
+                        Save Page
                     </button>
                 </div>
             </div>
@@ -435,7 +354,7 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-4">
                     <div>
-                        <input type="text" id="title" name="title" value={formData.title} onChange={handleChange} required className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-teal-500 rounded-md focus:ring-0 focus:outline-none text-2xl font-extrabold" placeholder="Post Title" />
+                        <input type="text" id="title" name="title" value={formData.title} onChange={handleChange} required className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-teal-500 rounded-md focus:ring-0 focus:outline-none text-2xl font-extrabold" placeholder="Page Title" />
                     </div>
 
                     <div className="flex items-center border-b border-slate-200 dark:border-slate-700">
@@ -448,39 +367,39 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
                     </div>
 
                     {editorMode === 'visual' && (
-                         <div className="flex items-center gap-1 flex-wrap p-2 bg-slate-100 dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-700">
-                             <ToolbarButton onMouseDown={(e) => handleBlockFormat(e, 'p')} title="Paragraph" isActive={activeFormats.blockType === 'p'}><span className="font-bold text-sm">P</span></ToolbarButton>
-                             <ToolbarButton onMouseDown={(e) => handleBlockFormat(e, 'h2')} title="Heading 2" isActive={activeFormats.blockType === 'h2'}><span className="font-bold text-sm">H2</span></ToolbarButton>
-                             <ToolbarButton onMouseDown={(e) => handleBlockFormat(e, 'h3')} title="Heading 3" isActive={activeFormats.blockType === 'h3'}><span className="font-bold text-sm">H3</span></ToolbarButton>
-                             <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1"></div>
-                             <ToolbarButton onMouseDown={(e) => handleInlineFormat(e, 'bold')} title="Bold" isActive={activeFormats.bold}><BoldIcon className="w-5 h-5" /></ToolbarButton>
-                             <ToolbarButton onMouseDown={(e) => handleInlineFormat(e, 'italic')} title="Italic" isActive={activeFormats.italic}><ItalicIcon className="w-5 h-5" /></ToolbarButton>
-                             <ToolbarButton onMouseDown={(e) => handleInlineFormat(e, 'underline')} title="Underline" isActive={activeFormats.underline}><UnderlineIcon className="w-5 h-5" /></ToolbarButton>
-                             <ToolbarButton onMouseDown={(e) => handleInlineFormat(e, 'strikeThrough')} title="Strikethrough" isActive={activeFormats.strikeThrough}><StrikethroughIcon className="w-5 h-5" /></ToolbarButton>
-                             <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1"></div>
-                             <div className="flex items-center p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
+                        <div className="flex items-center gap-1 flex-wrap p-2 bg-slate-100 dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-700">
+                            <ToolbarButton onMouseDown={(e) => handleBlockFormat(e, 'p')} title="Paragraph" isActive={activeFormats.blockType === 'p'}><span className="font-bold text-sm">P</span></ToolbarButton>
+                            <ToolbarButton onMouseDown={(e) => handleBlockFormat(e, 'h2')} title="Heading 2" isActive={activeFormats.blockType === 'h2'}><span className="font-bold text-sm">H2</span></ToolbarButton>
+                            <ToolbarButton onMouseDown={(e) => handleBlockFormat(e, 'h3')} title="Heading 3" isActive={activeFormats.blockType === 'h3'}><span className="font-bold text-sm">H3</span></ToolbarButton>
+                            <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1"></div>
+                            <ToolbarButton onMouseDown={(e) => handleInlineFormat(e, 'bold')} title="Bold" isActive={activeFormats.bold}><BoldIcon className="w-5 h-5" /></ToolbarButton>
+                            <ToolbarButton onMouseDown={(e) => handleInlineFormat(e, 'italic')} title="Italic" isActive={activeFormats.italic}><ItalicIcon className="w-5 h-5" /></ToolbarButton>
+                            <ToolbarButton onMouseDown={(e) => handleInlineFormat(e, 'underline')} title="Underline" isActive={activeFormats.underline}><UnderlineIcon className="w-5 h-5" /></ToolbarButton>
+                            <ToolbarButton onMouseDown={(e) => handleInlineFormat(e, 'strikeThrough')} title="Strikethrough" isActive={activeFormats.strikeThrough}><StrikethroughIcon className="w-5 h-5" /></ToolbarButton>
+                            <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1"></div>
+                            <div className="flex items-center p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
                                 <label htmlFor="foreColor" className="cursor-pointer p-1" title="Text Color"><TextColorIcon className="w-5 h-5" /></label>
                                 <input type="color" id="foreColor" className="w-6 h-6 border-none bg-transparent cursor-pointer" style={{padding:0}} onInput={(e) => handleValueChange(e as React.FormEvent<HTMLInputElement>, 'foreColor')} />
-                             </div>
-                             <select 
+                            </div>
+                            <select 
                                 onChange={(e) => handleValueChange(e, 'fontSize')} 
                                 className="bg-transparent border-none text-sm font-medium text-slate-600 dark:text-slate-300 focus:ring-0 focus:outline-none p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700"
                                 title="Font Size"
-                             >
+                            >
                                 <option value="3">Small</option>
                                 <option value="4" selected>Normal</option>
                                 <option value="5">Large</option>
                                 <option value="6">XL</option>
                                 <option value="7">Huge</option>
-                             </select>
-                             <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1"></div>
-                             <ToolbarButton onMouseDown={handleLink} title="Link" isActive={activeFormats.link}><LinkIcon className="w-5 h-5" /></ToolbarButton>
-                             <ToolbarButton onMouseDown={(e) => handleBlockFormat(e, 'blockquote')} title="Blockquote" isActive={activeFormats.blockquote}><QuoteIcon className="w-5 h-5" /></ToolbarButton>
-                             <ToolbarButton onMouseDown={(e) => handleListFormat(e, 'insertUnorderedList')} title="Bulleted List" isActive={activeFormats.ul}><ListUnorderedIcon className="w-5 h-5" /></ToolbarButton>
-                             <ToolbarButton onMouseDown={(e) => handleListFormat(e, 'insertOrderedList')} title="Numbered List" isActive={activeFormats.ol}><ListOrderedIcon className="w-5 h-5" /></ToolbarButton>
-                             <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1"></div>
+                            </select>
+                            <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1"></div>
+                            <ToolbarButton onMouseDown={handleLink} title="Link" isActive={activeFormats.link}><LinkIcon className="w-5 h-5" /></ToolbarButton>
+                            <ToolbarButton onMouseDown={(e) => handleBlockFormat(e, 'blockquote')} title="Blockquote" isActive={activeFormats.blockquote}><QuoteIcon className="w-5 h-5" /></ToolbarButton>
+                            <ToolbarButton onMouseDown={(e) => handleListFormat(e, 'insertUnorderedList')} title="Bulleted List" isActive={activeFormats.ul}><ListUnorderedIcon className="w-5 h-5" /></ToolbarButton>
+                            <ToolbarButton onMouseDown={(e) => handleListFormat(e, 'insertOrderedList')} title="Numbered List" isActive={activeFormats.ol}><ListOrderedIcon className="w-5 h-5" /></ToolbarButton>
+                            <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1"></div>
                             <ToolbarButton onMouseDown={(e) => { e.preventDefault(); imageContentUploadRef.current?.click(); }} title="Upload Image">
-                                 <ImageIcon className="w-5 h-5" />
+                                <ImageIcon className="w-5 h-5" />
                             </ToolbarButton>
                             <input
                                 type="file"
@@ -491,16 +410,16 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
                             />
                         </div>
                     )}
-                    
+
                     <div className="w-full h-[60vh] min-h-[500px]">
-                        {editorMode === 'visual' ? (
-                             <div
+                         {editorMode === 'visual' ? (
+                            <div
                                 ref={editorRef}
                                 contentEditable={true}
                                 onBlur={handleEditorContentBlur}
                                 className="w-full h-full p-4 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none overflow-y-auto prose dark:prose-invert max-w-none"
                             />
-                        ) : (
+                         ) : (
                             <textarea
                                 value={formData.content}
                                 onChange={handleHtmlContentChange}
@@ -508,7 +427,7 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
                                 placeholder="Enter your HTML content here..."
                                 spellCheck="false"
                             />
-                        )}
+                         )}
                     </div>
                 </div>
 
@@ -523,10 +442,6 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
                                     <span className="ml-3 text-sm font-medium text-slate-700 dark:text-slate-300">{formData.isPublished ? 'Published' : 'Draft'}</span>
                                 </label>
                             </div>
-                            <div>
-                                <label htmlFor="publishedAt" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Publish Date</label>
-                                <input type="datetime-local" id="publishedAt" name="publishedAt" value={dateForInput(formData.publishedAt)} onChange={handleChange} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" />
-                            </div>
                              <div>
                                 <label htmlFor="slug" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">URL Slug</label>
                                 <input type="text" id="slug" name="slug" value={formData.slug} onChange={handleChange} required className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono text-sm" />
@@ -534,94 +449,20 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
                          </div>
                      </Accordion>
 
-                     <Accordion title="Tags">
-                        <TagInput tags={formData.tags || []} setTags={handleTagsChange} />
-                     </Accordion>
-
-                    <Accordion title="Featured Image">
-                        <div className="space-y-4">
-                            {formData.featuredImageUrl && (
-                                <div className="relative group">
-                                    <img 
-                                        src={formData.featuredImageUrl} 
-                                        alt="Preview" 
-                                        className="w-full h-auto rounded-md border border-slate-200 dark:border-slate-700" 
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData(prev => ({ ...prev, featuredImageUrl: '' }))}
-                                        className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                        title="Remove Image"
-                                    >
-                                        <XIcon className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            )}
-                            
-                            <div className="space-y-2">
-                                <label 
-                                    htmlFor="imageUpload"
-                                    className="cursor-pointer w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-md hover:border-teal-500 dark:hover:border-teal-400 transition-colors text-center"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
-                                    <span className="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                                        Click to upload an image
-                                    </span>
-                                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                                        PNG, JPG, GIF up to 2MB
-                                    </span>
-                                </label>
-                                <input
-                                    id="imageUpload"
-                                    type="file"
-                                    accept="image/png, image/jpeg, image/gif, image/webp"
-                                    className="sr-only"
-                                    onChange={handleImageUpload}
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <div className="flex-grow border-t border-slate-300 dark:border-slate-600"></div>
-                                <span className="text-xs text-slate-500">OR</span>
-                                <div className="flex-grow border-t border-slate-300 dark:border-slate-600"></div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label htmlFor="featuredImageUrl" className="block text-sm font-medium text-slate-600 dark:text-slate-300">Paste an image URL</label>
-                                <input 
-                                    type="url" 
-                                    id="featuredImageUrl" 
-                                    name="featuredImageUrl" 
-                                    value={formData.featuredImageUrl || ''} 
-                                    onChange={handleChange} 
-                                    className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" 
-                                    placeholder="https://..."
-                                />
-                            </div>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">Note: Uploaded images are stored in your browser's local storage and can increase the size of your site's data.</p>
-                        </div>
-                    </Accordion>
-                     
-                    <Accordion title="Excerpt">
-                        <textarea id="excerpt" name="excerpt" value={formData.excerpt} onChange={handleChange} rows={4} required className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" />
-                    </Accordion>
-
                      <Accordion title="SEO & Social">
                          <div className="space-y-4">
                              <div>
                                 <label htmlFor="metaTitle" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Meta Title</label>
-                                <input type="text" id="metaTitle" name="metaTitle" value={formData.metaTitle} onChange={handleChange} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Defaults to post title" />
+                                <input type="text" id="metaTitle" name="metaTitle" value={formData.metaTitle} onChange={handleChange} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Defaults to page title" />
                                 <p className="text-xs text-slate-500 mt-1 text-right">{formData.metaTitle?.length || 0} / 60</p>
                             </div>
                             <div>
                                 <label htmlFor="metaDescription" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Meta Description</label>
-                                <textarea id="metaDescription" name="metaDescription" value={formData.metaDescription} onChange={handleChange} rows={3} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Defaults to excerpt" />
+                                <textarea id="metaDescription" name="metaDescription" value={formData.metaDescription} onChange={handleChange} rows={3} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none" />
                                 <p className="text-xs text-slate-500 mt-1 text-right">{formData.metaDescription?.length || 0} / 160</p>
                             </div>
                              <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-300 pt-2 border-t border-slate-200 dark:border-slate-700">Search Result Preview</h4>
-                             <SERPPreview title={formData.metaTitle || formData.title} description={formData.metaDescription || formData.excerpt} slug={formData.slug} />
+                             <SERPPreview title={formData.metaTitle || formData.title} description={formData.metaDescription || ''} slug={formData.slug} />
                          </div>
                      </Accordion>
                 </div>
@@ -630,4 +471,4 @@ const BlogPostEditor: React.FC<BlogPostEditorProps> = ({ post, onSave, onCancel 
     );
 };
 
-export default BlogPostEditor;
+export default CustomPageEditor;
