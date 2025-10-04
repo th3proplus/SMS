@@ -26,6 +26,8 @@ import { NewspaperIcon } from '../components/icons/NewspaperIcon';
 import BlogManagementPanel from '../components/admin/BlogManagementPanel';
 import { DocumentPlusIcon } from '../components/icons/DocumentPlusIcon';
 import CustomPageManagementPanel from '../components/admin/CustomPageManagementPanel';
+import { UploadIcon } from '../components/icons/UploadIcon';
+import { DownloadIcon } from '../components/icons/DownloadIcon';
 
 
 interface TabButtonProps {
@@ -142,6 +144,51 @@ async function handleRequest(request) {
         setTimeout(() => setIsSaving(false), 1000); 
     };
     
+    const handleExport = () => {
+        const settingsToExport = getSettings();
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(settingsToExport, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "sms-receiver-settings.json");
+        document.body.appendChild(downloadAnchorNode); // Required for Firefox
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    };
+
+    const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target?.result;
+                if (typeof text !== 'string') {
+                    throw new Error("File could not be read.");
+                }
+                const importedSettings = JSON.parse(text);
+                
+                // Basic validation
+                if (importedSettings && typeof importedSettings.title === 'string' && Array.isArray(importedSettings.publicNumbers)) {
+                    if (window.confirm("This will overwrite your current settings. Are you sure you want to continue?")) {
+                        saveSettings(importedSettings);
+                        // Update local state to reflect changes immediately
+                        setSettings(getSettings());
+                        alert("Settings imported successfully!");
+                    }
+                } else {
+                    throw new Error("Invalid settings file format.");
+                }
+            } catch (error: any) {
+                alert(`Error importing settings: ${error.message}`);
+            } finally {
+                // Reset file input so the same file can be loaded again
+                event.target.value = '';
+            }
+        };
+        reader.readAsText(file);
+    };
+
     const isTwilioConnected = settings.twilioAccountSid.startsWith('AC') && settings.twilioAuthToken;
     const isSignalWireConnected = settings.signalwireSpaceUrl && settings.signalwireProjectId && settings.signalwireApiToken;
 
@@ -263,8 +310,34 @@ async function handleRequest(request) {
                 </div>
             </div>
 
-             <div className="mt-6 text-right">
-                <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 bg-teal-600 text-white font-semibold rounded-md hover:bg-teal-700 disabled:bg-teal-800 disabled:cursor-wait">
+            <div className="mt-6 flex flex-wrap justify-end items-center gap-4 border-t border-slate-200 dark:border-slate-700 pt-6">
+                <p className="text-sm text-slate-500 dark:text-slate-400 mr-auto">
+                    To make changes persistent across browsers, export your settings and import them on another device.
+                </p>
+                <input 
+                    type="file" 
+                    id="import-settings" 
+                    className="hidden" 
+                    accept=".json" 
+                    onChange={handleImport} 
+                />
+                <label 
+                    htmlFor="import-settings" 
+                    className="flex items-center gap-2 cursor-pointer px-4 py-2 bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200 font-semibold rounded-md hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                >
+                    <UploadIcon className="w-5 h-5" />
+                    Import
+                </label>
+                <button 
+                    type="button" 
+                    onClick={handleExport} 
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200 font-semibold rounded-md hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                >
+                    <DownloadIcon className="w-5 h-5" />
+                    Export
+                </button>
+                <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white font-semibold rounded-md hover:bg-teal-700 disabled:bg-teal-800 disabled:cursor-wait">
+                    <SaveIcon className="w-5 h-5" />
                     {isSaving ? 'Saving...' : 'Save Settings'}
                 </button>
             </div>
