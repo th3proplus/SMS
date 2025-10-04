@@ -137,17 +137,16 @@ async function twilioFetch(endpoint: string, options: RequestInit = {}): Promise
         throw new Error('Twilio credentials are not configured or are invalid.');
     }
     
-    // Fix: Correctly append .json before query parameters.
     const queryIndex = endpoint.indexOf('?');
-    let resource = endpoint;
-    let queryString = '';
-
-    if (queryIndex !== -1) {
-        resource = endpoint.substring(0, queryIndex);
-        queryString = endpoint.substring(queryIndex);
+    let resource = queryIndex === -1 ? endpoint : endpoint.substring(0, queryIndex);
+    const queryString = queryIndex === -1 ? '' : endpoint.substring(queryIndex);
+    
+    if (!resource.endsWith('.json')) {
+        resource += '.json';
     }
 
-    const url = `${API_BASE}/Accounts/${twilioAccountSid}/${resource}.json${queryString}`;
+    const url = `${API_BASE}/Accounts/${twilioAccountSid}/${resource}${queryString}`;
+
 
     const headers = new Headers(options.headers);
     headers.set('Authorization', 'Basic ' + btoa(`${twilioAccountSid}:${twilioAuthToken}`));
@@ -184,6 +183,39 @@ async function twilioFetch(endpoint: string, options: RequestInit = {}): Promise
     // For successful responses, we expect JSON.
     return response.json();
 }
+
+
+/**
+ * Fetches all pages for a given Twilio list resource.
+ * @param initialEndpoint The starting endpoint (e.g., 'Messages').
+ * @param resourceKey The key in the response object that holds the array of items (e.g., 'messages').
+ * @returns A promise that resolves to an array of all items from all pages.
+ */
+const fetchAllTwilioPages = async (initialEndpoint: string, resourceKey: string): Promise<any[]> => {
+    const allItems: any[] = [];
+    let endpoint: string | null = initialEndpoint;
+
+    while (endpoint) {
+        const data = await twilioFetch(endpoint);
+        allItems.push(...(data[resourceKey] || []));
+        
+        if (data.next_page_uri) {
+            // next_page_uri is relative to the API base, e.g. /2010-04-01/Accounts/.../Resource.json?Page=1
+            const path = data.next_page_uri;
+            const accountsIndex = path.indexOf('/Accounts/');
+            if (accountsIndex > -1) {
+                const afterAccounts = path.substring(accountsIndex + '/Accounts/'.length);
+                const firstSlashIndex = afterAccounts.indexOf('/');
+                endpoint = firstSlashIndex > -1 ? afterAccounts.substring(firstSlashIndex + 1) : null;
+            } else {
+                endpoint = null;
+            }
+        } else {
+            endpoint = null;
+        }
+    }
+    return allItems;
+};
 
 const regionNames = new Intl.DisplayNames(['en'], {type: 'region'});
 
@@ -263,8 +295,7 @@ export const getOwnedNumbers = async (): Promise<PhoneNumber[]> => {
     }
     
     try {
-        const data = await twilioFetch('IncomingPhoneNumbers');
-        const twilioNumbers = data.incoming_phone_numbers || [];
+        const twilioNumbers = await fetchAllTwilioPages('IncomingPhoneNumbers', 'incoming_phone_numbers');
         
         // Concurrently fetch the latest message for each number to determine last activity
         const numbersWithActivity = await Promise.all(
@@ -323,8 +354,7 @@ export const getMessagesForNumber = async (phoneNumber: string): Promise<SMSMess
         return demoMsgs;
     }
     try {
-        const data = await twilioFetch(`Messages?To=${encodeURIComponent(phoneNumber)}&PageSize=50`);
-        const twilioMessages = data.messages || [];
+        const twilioMessages = await fetchAllTwilioPages(`Messages?To=${encodeURIComponent(phoneNumber)}&PageSize=50`, 'messages');
         return twilioMessages.map(mapTwilioMessageToSMSMessage);
     } catch (error) {
         console.error(`Failed to fetch messages for ${phoneNumber} from Twilio:`, error);
@@ -338,8 +368,7 @@ export const getWebhookLogs = async (): Promise<WebhookLog[]> => {
         throw new Error('Twilio credentials are not configured or are invalid.');
     }
     try {
-        const data = await twilioFetch('Alerts?PageSize=100');
-        const twilioAlerts = data.alerts || [];
+        const twilioAlerts = await fetchAllTwilioPages('Alerts?PageSize=100', 'alerts');
         return twilioAlerts.map(mapTwilioAlertToWebhookLog);
     } catch (error) {
         console.error("Failed to fetch webhook logs from Twilio:", error);

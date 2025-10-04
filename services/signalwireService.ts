@@ -25,25 +25,74 @@ async function signalwireFetch(endpoint: string, options: RequestInit = {}): Pro
     const finalProxyUrl = proxyBase.endsWith('/') ? proxyBase.slice(0, -1) : proxyBase;
     
     const response = await fetch(`${finalProxyUrl}/${url}`, { ...options, headers });
+    
+    const responseText = await response.text();
 
     if (!response.ok) {
         let errorMessage: string;
-        const errorText = await response.text();
         try {
-            const errorData = JSON.parse(errorText);
+            const errorData = JSON.parse(responseText);
             errorMessage = errorData.message || JSON.stringify(errorData);
         } catch (jsonError) {
-             if (errorText.includes('cors-anywhere') || errorText.includes('corsdemo')) {
+             if (responseText.includes('cors-anywhere') || responseText.includes('corsdemo')) {
                  errorMessage = 'The API proxy needs activation. Please open the proxy activation page, request temporary access, and then come back and refresh.';
             } else {
-                errorMessage = errorText.trim() || `API request failed with status ${response.status}`;
+                errorMessage = responseText.trim() || `API request failed with status ${response.status}`;
             }
         }
         throw new Error(`SignalWire API Error: ${errorMessage}`);
     }
     
-    return response.json();
+    // Gracefully handle empty or whitespace-only successful responses to prevent JSON parsing errors.
+    if (!responseText.trim()) {
+        if (endpoint.includes('IncomingPhoneNumbers.json')) {
+            return { incoming_phone_numbers: [] };
+        }
+        if (endpoint.includes('Messages.json')) {
+            return { messages: [] };
+        }
+        return {}; // Return empty object for other cases to prevent crashes.
+    }
+
+    try {
+        return JSON.parse(responseText);
+    } catch (e) {
+        console.error("SignalWire API Error: Failed to parse successful response as JSON.", responseText, e);
+        throw new Error("The SignalWire API returned an invalid format.");
+    }
 }
+
+/**
+ * Fetches all pages for a given SignalWire list resource.
+ * @param initialEndpoint The starting endpoint (e.g., 'Messages.json').
+ * @param resourceKey The key in the response object that holds the array of items (e.g., 'messages').
+ * @returns A promise that resolves to an array of all items from all pages.
+ */
+const fetchAllSignalWirePages = async (initialEndpoint: string, resourceKey: string): Promise<any[]> => {
+    const allItems: any[] = [];
+    let endpoint: string | null = initialEndpoint;
+
+    while (endpoint) {
+        const data = await signalwireFetch(endpoint);
+        allItems.push(...(data[resourceKey] || []));
+        
+        if (data.next_page_uri) {
+            // next_page_uri is relative to the API base, e.g. /2010-04-01/Accounts/.../Resource.json?Page=1
+            const path = data.next_page_uri;
+            const accountsIndex = path.indexOf('/Accounts/');
+            if (accountsIndex > -1) {
+                const afterAccounts = path.substring(accountsIndex + '/Accounts/'.length);
+                const firstSlashIndex = afterAccounts.indexOf('/');
+                endpoint = firstSlashIndex > -1 ? afterAccounts.substring(firstSlashIndex + 1) : null;
+            } else {
+                endpoint = null;
+            }
+        } else {
+            endpoint = null;
+        }
+    }
+    return allItems;
+};
 
 const mapSignalWireNumberToPhoneNumber = (swNumber: any): PhoneNumber => {
     // SignalWire API for numbers doesn't provide ISO country code.
@@ -76,8 +125,7 @@ export const getOwnedNumbers = async (): Promise<PhoneNumber[]> => {
     }
     
     try {
-        const data = await signalwireFetch('IncomingPhoneNumbers.json');
-        const swNumbers = data.incoming_phone_numbers || [];
+        const swNumbers = await fetchAllSignalWirePages('IncomingPhoneNumbers.json', 'incoming_phone_numbers');
         
         const numbersWithActivity = await Promise.all(
             swNumbers.map(async (swNumber: any) => {
@@ -123,8 +171,7 @@ export const getMessagesForNumber = async (phoneNumber: string): Promise<SMSMess
         throw new Error('SignalWire credentials are not configured or are invalid.');
     }
     try {
-        const data = await signalwireFetch(`Messages.json?To=${encodeURIComponent(phoneNumber)}&PageSize=50`);
-        const swMessages = data.messages || [];
+        const swMessages = await fetchAllSignalWirePages(`Messages.json?To=${encodeURIComponent(phoneNumber)}&PageSize=50`, 'messages');
         return swMessages.map(mapSignalWireMessageToSMSMessage);
     } catch (error) {
         console.error(`Failed to fetch messages for ${phoneNumber} from SignalWire:`, error);

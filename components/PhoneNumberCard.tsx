@@ -13,7 +13,7 @@ const PhoneNumberCard: React.FC<PhoneNumberCardProps> = ({ number }) => {
   return (
     <a
       href={`/number/${encodeURIComponent(number.number)}`}
-      className="group bg-white dark:bg-slate-800 rounded-xl shadow-md hover:shadow-lg dark:hover:shadow-teal-900/30 border border-slate-200 dark:border-slate-700 transition-all duration-300 transform hover:-translate-y-1 flex flex-col p-5"
+      className="group bg-white dark:bg-slate-800 rounded-xl shadow-md hover:shadow-lg dark:hover:shadow-teal-900/30 border border-slate-200 dark:border-slate-700 transition-all duration-300 transform hover:-translate-y-1 flex flex-col p-5 h-full"
     >
       {/* Top: Flag and Country */}
       <div className="flex items-center gap-3 mb-4">
