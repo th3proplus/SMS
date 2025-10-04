@@ -30,7 +30,10 @@ import CustomPageManagementPanel from '../components/admin/CustomPageManagementP
 import { UploadIcon } from '../components/icons/UploadIcon';
 import { DownloadIcon } from '../components/icons/DownloadIcon';
 import { CloudIcon } from '../components/icons/CloudIcon';
+import { CloudCheckIcon } from '../components/icons/CloudCheckIcon';
+import { CloudExclamationIcon } from '../components/icons/CloudExclamationIcon';
 
+type SyncStatus = 'synced' | 'unsynced' | 'syncing' | 'error' | 'local';
 
 interface TabButtonProps {
     icon: React.ReactNode;
@@ -1039,7 +1042,7 @@ const CloudSyncPanel: React.FC = () => {
     useEffect(() => {
         localStorage.setItem(GITHUB_TOKEN_KEY, token);
     }, [token]);
-    
+
     const handleFetch = async () => {
         if (!gistId || !token) {
             setStatus({ type: 'error', message: 'Gist ID and Token are required.' });
@@ -1048,16 +1051,17 @@ const CloudSyncPanel: React.FC = () => {
         setStatus({ type: 'loading', message: 'Fetching settings from cloud...' });
         try {
             const settings = await fetchSettingsFromGist(gistId, token);
-            if (window.confirm("Successfully fetched settings from cloud. Do you want to overwrite your current local settings?")) {
-                saveSettings(settings);
-                setStatus({ type: 'success', message: 'Settings successfully fetched and applied locally.' });
-                // Optionally, force a refresh or use an event to notify other components
-                window.location.reload();
+            if (window.confirm("Successfully fetched settings from cloud. Do you want to overwrite your current local settings? This will reload the page.")) {
+                saveSettings(settings, { dispatchEvent: false });
+                sessionStorage.setItem('sync_status', 'synced');
+                setStatus({ type: 'success', message: 'Settings successfully fetched. Reloading...' });
+                setTimeout(() => window.location.reload(), 1000);
             } else {
                  setStatus({ type: 'idle', message: 'Fetch cancelled.' });
             }
         } catch (error: any) {
             setStatus({ type: 'error', message: `Failed to fetch: ${error.message}` });
+            sessionStorage.setItem('sync_status', 'error');
         }
     };
     
@@ -1070,9 +1074,11 @@ const CloudSyncPanel: React.FC = () => {
         try {
             const currentSettings = getSettings();
             await saveSettingsToGist(gistId, token, currentSettings);
+            sessionStorage.setItem('sync_status', 'synced');
             setStatus({ type: 'success', message: 'Settings successfully saved to cloud.' });
         } catch (error: any) {
             setStatus({ type: 'error', message: `Failed to save: ${error.message}` });
+            sessionStorage.setItem('sync_status', 'error');
         }
     };
 
@@ -1151,6 +1157,29 @@ const CloudSyncPanel: React.FC = () => {
 
 const AdminPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('settings');
+    const [syncStatus, setSyncStatus] = useState<SyncStatus>('local');
+
+    useEffect(() => {
+        const updateStatus = () => {
+            const status = sessionStorage.getItem('sync_status') as SyncStatus | null;
+            setSyncStatus(status || 'local');
+        };
+
+        updateStatus(); // Initial check
+        
+        // Listen for changes from other components (e.g., CloudSyncPanel)
+        const handleStorageChange = () => updateStatus();
+        window.addEventListener('storage', handleStorageChange);
+
+        // Also listen for our custom event, as 'storage' event doesn't fire on the same page
+        window.addEventListener('settingsChanged', updateStatus);
+
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('settingsChanged', updateStatus);
+        };
+    }, []);
 
     const handleLogout = () => {
         logout();
@@ -1181,6 +1210,24 @@ const AdminPage: React.FC = () => {
                 return null;
         }
     };
+    
+    const SyncStatusIndicator: React.FC = () => {
+        const statusMap = {
+            synced: { icon: <CloudCheckIcon className="w-5 h-5 text-green-500" />, text: 'Synced with Cloud', color: 'text-green-500' },
+            unsynced: { icon: <UploadIcon className="w-5 h-5 text-yellow-500" />, text: 'Unsynced Changes', color: 'text-yellow-500' },
+            error: { icon: <CloudExclamationIcon className="w-5 h-5 text-red-500" />, text: 'Sync Error', color: 'text-red-500' },
+            syncing: { icon: <RefreshIcon className="w-5 h-5 text-blue-500 animate-spin" />, text: 'Syncing...', color: 'text-blue-500' },
+            local: { icon: <CloudIcon className="w-5 h-5 text-slate-500" />, text: 'Cloud Sync Not Configured', color: 'text-slate-500' }
+        };
+        const current = statusMap[syncStatus];
+    
+        return (
+            <div className="flex items-center gap-2 p-2 rounded-md bg-slate-100 dark:bg-slate-700/50" title={current.text}>
+                {current.icon}
+                <span className={`text-sm font-medium hidden sm:inline ${current.color}`}>{current.text}</span>
+            </div>
+        );
+    };
 
     return (
         <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
@@ -1193,13 +1240,13 @@ const AdminPage: React.FC = () => {
                         </h1>
                     </div>
                     <div className="flex items-center gap-2 sm:gap-4">
+                        <SyncStatusIndicator />
                          <button
                             onClick={() => navigate('/')}
                             className="flex items-center gap-2 p-2 rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-teal-500 dark:hover:text-teal-400 transition-colors"
                             title="View Public Site"
                         >
                             <EyeIcon className="w-5 h-5" />
-                            <span className="text-sm font-medium hidden sm:inline">Public Site</span>
                         </button>
                         <button
                             onClick={handleLogout}
@@ -1207,7 +1254,6 @@ const AdminPage: React.FC = () => {
                             title="Logout"
                         >
                             <LogoutIcon className="w-5 h-5" />
-                            <span className="text-sm font-medium hidden sm:inline">Logout</span>
                         </button>
                     </div>
                 </div>

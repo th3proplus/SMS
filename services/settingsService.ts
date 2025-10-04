@@ -1,4 +1,5 @@
 import type { Settings } from '../types';
+import { fetchSettingsFromGist } from './cloudSyncService';
 
 const SETTINGS_KEY = 'sms_receiver_settings';
 
@@ -101,6 +102,27 @@ const defaultSettings: Settings = {
     customPages: [],
 };
 
+export const initializeSettings = async (): Promise<void> => {
+    const gistId = localStorage.getItem('sms_receiver_gist_id');
+    const token = localStorage.getItem('sms_receiver_github_token');
+
+    if (gistId && token) {
+        try {
+            const cloudSettings = await fetchSettingsFromGist(gistId, token);
+            // Save fetched settings to local storage. This becomes the new source of truth.
+            saveSettings(cloudSettings, { dispatchEvent: false }); 
+            sessionStorage.setItem('sync_status', 'synced');
+            console.log("Cloud settings successfully synced on startup.");
+        } catch (error) {
+            console.error("Failed to sync settings from cloud on startup:", error);
+            sessionStorage.setItem('sync_status', 'error');
+            // Fallback to local settings is implicit, as we don't overwrite them on failure.
+        }
+    } else {
+        sessionStorage.setItem('sync_status', 'local');
+    }
+};
+
 export const getSettings = (): Settings => {
     try {
         const storedSettings = localStorage.getItem(SETTINGS_KEY);
@@ -153,10 +175,22 @@ export const getSettings = (): Settings => {
     return defaultSettings;
 };
 
-export const saveSettings = (settings: Settings): void => {
+export const saveSettings = (settings: Settings, options: { dispatchEvent?: boolean, updateSyncStatus?: boolean } = {}): void => {
+    const { dispatchEvent = true, updateSyncStatus = true } = options;
     try {
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-        window.dispatchEvent(new CustomEvent('settingsChanged'));
+
+        if (updateSyncStatus) {
+            const gistId = localStorage.getItem('sms_receiver_gist_id');
+            if (gistId) {
+                // If cloud sync is configured, saving locally means we have unsynced changes.
+                sessionStorage.setItem('sync_status', 'unsynced');
+            }
+        }
+
+        if (dispatchEvent) {
+            window.dispatchEvent(new CustomEvent('settingsChanged'));
+        }
     } catch (error) {
         console.error("Failed to save settings to localStorage", error);
     }

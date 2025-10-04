@@ -1,7 +1,7 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { getSettings } from './services/settingsService';
+import { getSettings, initializeSettings } from './services/settingsService';
 import { navigate } from './services/navigationService';
 import type { Settings } from './types';
 import HomePage from './pages/HomePage';
@@ -13,6 +13,7 @@ import TextContentPage from './pages/TextContentPage';
 import BlogIndexPage from './pages/BlogIndexPage';
 import BlogPostPage from './pages/BlogPostPage';
 import CustomPageViewer from './pages/CustomPageViewer';
+import { RefreshIcon } from './components/icons/RefreshIcon';
 
 // Helper to extract the path from the hash, e.g., "#/some/path" -> "/some/path"
 const getPathFromHash = () => {
@@ -26,10 +27,18 @@ const getPathFromHash = () => {
 
 
 const App: React.FC = () => {
+    const [isInitializing, setIsInitializing] = useState(true);
     const [pathname, setPathname] = useState(getPathFromHash());
-    const [settings, setSettings] = useState<Settings>(getSettings());
+    const [settings, setSettings] = useState<Settings | null>(null);
 
     useEffect(() => {
+        const init = async () => {
+            await initializeSettings();
+            setSettings(getSettings());
+            setIsInitializing(false);
+        };
+        init();
+
         const handleLocationChange = () => {
             setPathname(getPathFromHash());
         };
@@ -127,8 +136,11 @@ const App: React.FC = () => {
                 });
             }
         };
-
-        updateHeadCode();
+        
+        // Don't run this effect until settings are initialized
+        if (!isInitializing) {
+            updateHeadCode();
+        }
         window.addEventListener('settingsChanged', updateHeadCode);
 
         return () => {
@@ -138,7 +150,18 @@ const App: React.FC = () => {
                 container.remove();
             }
         };
-    }, []);
+    }, [isInitializing]);
+    
+    if (isInitializing || !settings) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-slate-900 text-slate-400">
+                <div className="flex items-center gap-3">
+                    <RefreshIcon className="w-6 h-6 animate-spin" />
+                    <span>Syncing settings...</span>
+                </div>
+            </div>
+        );
+    }
 
     const renderRoute = () => {
         if (pathname.startsWith('/number/')) {
