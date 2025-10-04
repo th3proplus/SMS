@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { logout, updateCredentials } from '../services/authService';
 import { getSettings, saveSettings } from '../services/settingsService';
+import { fetchSettingsFromGist, saveSettingsToGist } from '../services/cloudSyncService';
 import { getOwnedNumbers, getWebhookLogs, demoNumbers } from '../services/twilioService';
 import { getOwnedNumbers as getSignalWireNumbers } from '../services/signalwireService';
 import { navigate } from '../services/navigationService';
@@ -28,6 +29,7 @@ import { DocumentPlusIcon } from '../components/icons/DocumentPlusIcon';
 import CustomPageManagementPanel from '../components/admin/CustomPageManagementPanel';
 import { UploadIcon } from '../components/icons/UploadIcon';
 import { DownloadIcon } from '../components/icons/DownloadIcon';
+import { CloudIcon } from '../components/icons/CloudIcon';
 
 
 interface TabButtonProps {
@@ -312,7 +314,7 @@ async function handleRequest(request) {
 
             <div className="mt-6 flex flex-wrap justify-end items-center gap-4 border-t border-slate-200 dark:border-slate-700 pt-6">
                 <p className="text-sm text-slate-500 dark:text-slate-400 mr-auto">
-                    To make changes persistent across browsers, export your settings and import them on another device.
+                    Use Import/Export for local backups or one-time transfers between browsers.
                 </p>
                 <input 
                     type="file" 
@@ -1022,6 +1024,130 @@ const SecurityPanel: React.FC = () => {
     );
 };
 
+const CloudSyncPanel: React.FC = () => {
+    const GIST_ID_KEY = 'sms_receiver_gist_id';
+    const GITHUB_TOKEN_KEY = 'sms_receiver_github_token';
+
+    const [gistId, setGistId] = useState(() => localStorage.getItem(GIST_ID_KEY) || '');
+    const [token, setToken] = useState(() => localStorage.getItem(GITHUB_TOKEN_KEY) || '');
+    const [status, setStatus] = useState<{ type: 'idle' | 'loading' | 'success' | 'error'; message: string }>({ type: 'idle', message: '' });
+
+    useEffect(() => {
+        localStorage.setItem(GIST_ID_KEY, gistId);
+    }, [gistId]);
+
+    useEffect(() => {
+        localStorage.setItem(GITHUB_TOKEN_KEY, token);
+    }, [token]);
+    
+    const handleFetch = async () => {
+        if (!gistId || !token) {
+            setStatus({ type: 'error', message: 'Gist ID and Token are required.' });
+            return;
+        }
+        setStatus({ type: 'loading', message: 'Fetching settings from cloud...' });
+        try {
+            const settings = await fetchSettingsFromGist(gistId, token);
+            if (window.confirm("Successfully fetched settings from cloud. Do you want to overwrite your current local settings?")) {
+                saveSettings(settings);
+                setStatus({ type: 'success', message: 'Settings successfully fetched and applied locally.' });
+                // Optionally, force a refresh or use an event to notify other components
+                window.location.reload();
+            } else {
+                 setStatus({ type: 'idle', message: 'Fetch cancelled.' });
+            }
+        } catch (error: any) {
+            setStatus({ type: 'error', message: `Failed to fetch: ${error.message}` });
+        }
+    };
+    
+    const handleSave = async () => {
+        if (!gistId || !token) {
+            setStatus({ type: 'error', message: 'Gist ID and Token are required.' });
+            return;
+        }
+        setStatus({ type: 'loading', message: 'Saving current settings to cloud...' });
+        try {
+            const currentSettings = getSettings();
+            await saveSettingsToGist(gistId, token, currentSettings);
+            setStatus({ type: 'success', message: 'Settings successfully saved to cloud.' });
+        } catch (error: any) {
+            setStatus({ type: 'error', message: `Failed to save: ${error.message}` });
+        }
+    };
+
+    const getStatusColor = () => {
+        switch (status.type) {
+            case 'loading': return 'text-blue-500';
+            case 'success': return 'text-green-500';
+            case 'error': return 'text-red-500';
+            default: return 'text-slate-500';
+        }
+    };
+
+    return (
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md space-y-6">
+            <div>
+                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Cloud Sync with GitHub Gist</h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Save your settings to a private Gist to sync and back them up across browsers and devices.</p>
+            </div>
+            <div className="space-y-4">
+                <div>
+                    <label htmlFor="gistId" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Gist ID</label>
+                    <input type="text" id="gistId" value={gistId} onChange={(e) => setGistId(e.target.value)} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono" placeholder="e.g., 123abc456def789" />
+                </div>
+                <div>
+                    <label htmlFor="token" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">GitHub Personal Access Token</label>
+                    <input type="password" id="token" value={token} onChange={(e) => setToken(e.target.value)} className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono" placeholder="ghp_xxxxxxxxxxxxxxxx" />
+                </div>
+            </div>
+            <details className="group">
+                <summary className="cursor-pointer text-sm font-medium text-teal-600 dark:text-teal-400 hover:underline">
+                    How to get your Gist ID and Token
+                </summary>
+                <div className="mt-2 p-4 bg-slate-100 dark:bg-slate-900/50 rounded-md border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-300 prose prose-sm dark:prose-invert max-w-none">
+                    <h4>Creating the Gist</h4>
+                    <ol>
+                        <li>Go to <a href="https://gist.github.com/" target="_blank" rel="noopener noreferrer">gist.github.com</a>.</li>
+                        <li>Enter <code>sms-receiver-settings.json</code> as the filename.</li>
+                        <li>In the content box, type <code>{`{}`}</code> (an empty JSON object).</li>
+                        <li>Click the dropdown next to "Create public gist" and select <strong>"Create secret gist"</strong>. This is crucial for security.</li>
+                        <li>Click the "Create secret gist" button.</li>
+                        <li>The <strong>Gist ID</strong> is the long string of characters in the URL after your username. For example, in <code>https://gist.github.com/username/<strong>123abc456def789</strong></code>, the ID is <code>123abc456def789</code>. Copy this ID.</li>
+                    </ol>
+                    <h4>Creating the Access Token</h4>
+                    <ol>
+                        <li>Go to your GitHub <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer">Personal access tokens</a> page.</li>
+                        <li>Click "Generate new token" and choose "Generate new token (classic)".</li>
+                        <li>Give the token a descriptive name, like "SMS Receiver Sync".</li>
+                        <li>Set the expiration (90 days is a good balance of security and convenience).</li>
+                        <li>Under "Select scopes", check the box next to <strong><code>gist</code></strong>. No other scopes are needed.</li>
+                        <li>Click "Generate token" at the bottom of the page.</li>
+                        <li><strong>Important:</strong> Copy your new token immediately. You will not be able to see it again. Paste it into the field above.</li>
+                    </ol>
+                </div>
+            </details>
+            <div className="flex flex-col sm:flex-row items-center gap-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <div className="flex items-center gap-4">
+                    <button onClick={handleFetch} disabled={status.type === 'loading'} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-wait">
+                        <DownloadIcon className="w-5 h-5" />
+                        Fetch from Cloud
+                    </button>
+                    <button onClick={handleSave} disabled={status.type === 'loading'} className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white font-semibold rounded-md hover:bg-teal-700 disabled:bg-teal-800 disabled:cursor-wait">
+                        <UploadIcon className="w-5 h-5" />
+                        Save to Cloud
+                    </button>
+                </div>
+                {status.message && (
+                    <p className={`text-sm font-medium ${getStatusColor()}`}>
+                        {status.message}
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+};
+
 
 const AdminPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('settings');
@@ -1037,6 +1163,8 @@ const AdminPage: React.FC = () => {
                 return <SettingsPanel />;
             case 'numbers':
                 return <NumbersPanel />;
+            case 'cloud':
+                return <CloudSyncPanel />;
             case 'blog':
                 return <BlogManagementPanel />;
             case 'customPages':
@@ -1091,6 +1219,7 @@ const AdminPage: React.FC = () => {
                         <nav className="flex flex-row md:flex-col gap-2 bg-white dark:bg-slate-800 p-3 rounded-lg shadow-md overflow-x-auto md:overflow-y-auto">
                             <TabButton icon={<SettingsIcon className="w-5 h-5" />} label="General Settings" tabName="settings" activeTab={activeTab} setActiveTab={setActiveTab} />
                             <TabButton icon={<PhoneIcon className="w-5 h-5" />} label="Phone Numbers" tabName="numbers" activeTab={activeTab} setActiveTab={setActiveTab} />
+                            <TabButton icon={<CloudIcon className="w-5 h-5" />} label="Cloud Sync" tabName="cloud" activeTab={activeTab} setActiveTab={setActiveTab} />
                             <TabButton icon={<NewspaperIcon className="w-5 h-5" />} label="Blog" tabName="blog" activeTab={activeTab} setActiveTab={setActiveTab} />
                             <TabButton icon={<DocumentPlusIcon className="w-5 h-5" />} label="Custom Pages" tabName="customPages" activeTab={activeTab} setActiveTab={setActiveTab} />
                             <TabButton icon={<WebhookIcon className="w-5 h-5" />} label="Webhook Logs" tabName="webhooks" activeTab={activeTab} setActiveTab={setActiveTab} />
